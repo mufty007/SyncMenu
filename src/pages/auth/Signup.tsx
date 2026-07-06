@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Logo from "../../components/Logo";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
+import { resolvePostAuthPath } from "../../lib/authRedirect";
 import SetupNotice from "../SetupNotice";
 
 export default function Signup() {
@@ -36,7 +37,8 @@ export default function Signup() {
         origin: window.location.origin,
       },
     });
-    navigate("/onboarding", { replace: true });
+    const dest = await resolvePostAuthPath();
+    navigate(dest === "/app" ? "/onboarding" : dest, { replace: true });
   }
 
   return (

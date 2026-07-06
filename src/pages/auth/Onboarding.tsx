@@ -35,7 +35,7 @@ const STARTER_SECTIONS: { name: string; items: [string, string, number][] }[] = 
 ];
 
 export default function Onboarding() {
-  const { session, restaurant, refreshRestaurant } = useAuth();
+  const { session, restaurant, isPlatformAdmin, refreshRestaurant } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [done, setDone] = useState(false);
@@ -81,6 +81,8 @@ export default function Onboarding() {
     [name, currency, logoPreview]
   );
 
+  if (!session) return <Navigate to="/login" replace />;
+  if (isPlatformAdmin && !restaurant) return <Navigate to="/platform" replace />;
   if (restaurant && !done) return <Navigate to="/app" replace />;
 
   async function finish() {

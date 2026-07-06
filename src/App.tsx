@@ -50,7 +50,7 @@ function Spinner() {
 }
 
 function Protected({ children }: { children: ReactNode }) {
-  const { session, restaurant, loading } = useAuth();
+  const { session, restaurant, isPlatformAdmin, loading } = useAuth();
   const location = useLocation();
   if (!isSupabaseConfigured) return <SetupNotice />;
   if (loading) return <Spinner />;
@@ -58,6 +58,9 @@ function Protected({ children }: { children: ReactNode }) {
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
   if (!restaurant && location.pathname !== "/onboarding") {
+    if (isPlatformAdmin) {
+      return <Navigate to="/platform" replace />;
+    }
     return <Navigate to="/onboarding" replace />;
   }
   return <>{children}</>;
