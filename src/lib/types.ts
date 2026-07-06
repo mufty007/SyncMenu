@@ -204,6 +204,9 @@ export interface Restaurant {
   created_at: string;
   links?: RestaurantLinks;
   about?: string;
+  status?: "active" | "suspended";
+  suspended_at?: string | null;
+  suspended_reason?: string | null;
 }
 
 export interface Menu {
@@ -268,7 +271,7 @@ export interface PlaylistSlide {
 
 /** Shape returned by the get_screen_content RPC for the kiosk player. */
 export interface ScreenContent {
-  status: "ok" | "revoked";
+  status: "ok" | "revoked" | "suspended" | "trial_expired";
   screen?: { id: string; name: string; orientation: Orientation };
   restaurant?: {
     name: string;
@@ -297,6 +300,14 @@ export const PLAN_LIMITS = {
   menus: 10,
   templates: 5,
   storageMb: 100,
+};
+
+/** Per-plan limits — keep in sync with SQL helpers in migration 0006. */
+export const PLAN_LIMITS_BY_PLAN: Record<string, { screens: number; menus: number }> = {
+  starter: { screens: 1, menus: 5 },
+  growth: { screens: 2, menus: 10 },
+  pro: { screens: 5, menus: 999 },
+  trial: { screens: 2, menus: 10 },
 };
 
 export interface Subscription {

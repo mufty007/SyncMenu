@@ -20,12 +20,7 @@ updates in real time. See `prd.md` (product spec) and `brand-guide.md`
    tier works).
 
 3. **Run the migrations**: open the Supabase SQL editor and run, in order,
-   `supabase/migrations/0001_init.sql` (tables, RLS policies, QR-pairing RPCs,
-   player content RPC, realtime broadcast triggers, `menu-images` storage
-   bucket), `supabase/migrations/0002_featured_and_public_menu.sql`
-   (featured items + public customer-menu RPC), and
-   `supabase/migrations/0003_public_hub.sql` (restaurant hub: ordering/social
-   links, dietary tags, hub RPC).
+   `supabase/migrations/0001_init.sql` through `0006_enforcement.sql`.
 
 4. **Configure env**: copy `.env.example` to `.env` and fill in your project
    URL and anon key (Project Settings → API).
@@ -96,7 +91,7 @@ To deploy the backend:
    npx supabase login
    npx supabase link --project-ref hhncgqdqnznnlcoswmrm
    npx supabase secrets set STRIPE_SECRET_KEY=<sk_test_...> STRIPE_WEBHOOK_SECRET=<whsec_...>
-   npx supabase functions deploy create-checkout-session customer-portal stripe-webhook
+   npx supabase functions deploy create-checkout-session customer-portal stripe-webhook on-user-created send-announcement unsubscribe
    ```
 
    (`config.toml` already disables JWT verification for `stripe-webhook`;
@@ -108,6 +103,25 @@ To deploy the backend:
 Going live later: swap the test keys for live keys (secrets + re-create
 products/prices/webhook in live mode and update the IDs in
 `supabase/functions/_shared/stripe.ts`).
+
+## Platform admin (`/platform`)
+
+After running `0005_platform_admin.sql`, seed your super admin(s) in the SQL
+editor (max 3):
+
+```sql
+insert into public.platform_admins (user_id, email)
+select id, email from auth.users where email = 'you@example.com';
+```
+
+Set email secrets:
+
+```sh
+npx supabase secrets set SMTP2GO_API_KEY=... SMTP2GO_SENDER=hello@syncmenu.app SITE_ORIGIN=https://syncmenu.vercel.app
+```
+
+Platform console routes: `/platform` (overview), `/platform/tenants`,
+`/platform/billing`, `/platform/emails`, `/platform/admins`, `/platform/audit`.
 
 ## Not wired up yet
 

@@ -70,12 +70,14 @@ interface BoardProps {
   templateId: TemplateId;
   config: Partial<TemplateConfig>;
   orientation: Orientation;
+  /** High-priority decode for kiosk player backgrounds. */
+  priority?: boolean;
 }
 
 const DENSITY_SCALE = { cozy: 1.12, standard: 1, compact: 0.86 } as const;
 
 /** Renders a full menu board at native TV resolution (1920x1080 / 1080x1920). */
-export default function MenuBoard({ data, templateId, config, orientation }: BoardProps) {
+export default function MenuBoard({ data, templateId, config, orientation, priority }: BoardProps) {
   const cfg: TemplateConfig = { ...DEFAULT_TEMPLATE_CONFIG, ...config };
   const { width, height } = boardDimensions(orientation);
   // Freeform studio designs win over the legacy preset-based custom board.
@@ -101,6 +103,8 @@ export default function MenuBoard({ data, templateId, config, orientation }: Boa
             <img
               src={cfg.backgroundImage}
               alt=""
+              decoding="async"
+              fetchPriority={priority ? "high" : "auto"}
               style={{ width: "100%", height: "100%", objectFit: "cover" }}
             />
             <div

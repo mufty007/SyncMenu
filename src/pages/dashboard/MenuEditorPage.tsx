@@ -32,6 +32,7 @@ import MenuBoard, { TEMPLATES, boardDimensions } from "../../templates/MenuBoard
 import { TAG_ICONS } from "../../templates/shared";
 import ScaledFrame from "../../components/ScaledFrame";
 import Toggle from "../../components/Toggle";
+import { deleteMenuImageUrl, uploadMenuImage } from "../../lib/uploadImage";
 
 type SectionWithItems = MenuSection & { items: MenuItem[] };
 
@@ -92,17 +93,14 @@ export default function MenuEditorPage() {
   }
 
   async function uploadBackground(file: File) {
-    const ext = file.name.split(".").pop() ?? "jpg";
-    const path = `${restaurant!.id}/board-bg-${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("menu-images").upload(path, file, {
-      upsert: true,
-    });
-    if (error) {
-      alert(`Upload failed: ${error.message}`);
-      return;
+    try {
+      const path = `${restaurant!.id}/board-bg-${Date.now()}.jpg`;
+      const publicUrl = await uploadMenuImage(path, file);
+      void deleteMenuImageUrl(config.backgroundImage);
+      patchConfig({ backgroundImage: publicUrl });
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Upload failed");
     }
-    const { data } = supabase.storage.from("menu-images").getPublicUrl(path);
-    patchConfig({ backgroundImage: data.publicUrl });
   }
 
   async function deleteMenu() {
@@ -211,17 +209,13 @@ export default function MenuEditorPage() {
   }
 
   async function uploadItemImage(sectionId: string, itemId: string, file: File) {
-    const ext = file.name.split(".").pop() ?? "jpg";
-    const path = `${restaurant!.id}/${itemId}-${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("menu-images").upload(path, file, {
-      upsert: true,
-    });
-    if (error) {
-      alert(`Upload failed: ${error.message}`);
-      return;
+    try {
+      const path = `${restaurant!.id}/${itemId}-${Date.now()}.jpg`;
+      const publicUrl = await uploadMenuImage(path, file);
+      await saveItem(sectionId, itemId, { image_url: publicUrl });
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Upload failed");
     }
-    const { data } = supabase.storage.from("menu-images").getPublicUrl(path);
-    await saveItem(sectionId, itemId, { image_url: data.publicUrl });
   }
 
   const { width, height } = boardDimensions(menu.orientation);

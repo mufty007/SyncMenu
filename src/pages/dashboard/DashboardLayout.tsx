@@ -11,6 +11,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Settings,
+  Shield,
 } from "lucide-react";
 import Logo, { SyncIcon } from "../../components/Logo";
 import Walkthrough from "../../components/Walkthrough";
@@ -31,7 +32,7 @@ const NAV = [
 const COLLAPSE_KEY = "syncmenu.sidebar-collapsed";
 
 export default function DashboardLayout() {
-  const { restaurant, signOut } = useAuth();
+  const { restaurant, signOut, isPlatformAdmin } = useAuth();
   const daysLeft = restaurant ? trialDaysLeft(restaurant.trial_ends_at) : 0;
   const [collapsed, setCollapsed] = useState(
     () => localStorage.getItem(COLLAPSE_KEY) === "1"
@@ -106,6 +107,18 @@ export default function DashboardLayout() {
         <div className="border-t border-mist pt-3">
           {!collapsed && (
             <p className="truncate px-3 text-sm font-medium">{restaurant?.name}</p>
+          )}
+          {isPlatformAdmin && (
+            <NavLink
+              to="/platform"
+              title="Platform console"
+              className={`btn-ghost mt-1 w-full ${
+                collapsed ? "justify-center px-0" : "justify-start"
+              }`}
+            >
+              <Shield size={16} className="shrink-0" />
+              {!collapsed && "Platform console"}
+            </NavLink>
           )}
           <button
             onClick={() => setTourOpen(true)}

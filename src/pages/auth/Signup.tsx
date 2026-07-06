@@ -29,6 +29,13 @@ export default function Signup() {
       setNeedsConfirm(true);
       return;
     }
+    void supabase.functions.invoke("on-user-created", {
+      body: {
+        email,
+        userId: data.user?.id,
+        origin: window.location.origin,
+      },
+    });
     navigate("/onboarding", { replace: true });
   }
 

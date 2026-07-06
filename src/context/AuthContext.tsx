@@ -13,6 +13,7 @@ import type { Restaurant } from "../lib/types";
 interface AuthState {
   session: Session | null;
   restaurant: Restaurant | null;
+  isPlatformAdmin: boolean;
   loading: boolean;
   refreshRestaurant: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -21,6 +22,7 @@ interface AuthState {
 const AuthContext = createContext<AuthState>({
   session: null,
   restaurant: null,
+  isPlatformAdmin: false,
   loading: true,
   refreshRestaurant: async () => {},
   signOut: async () => {},
@@ -29,19 +31,21 @@ const AuthContext = createContext<AuthState>({
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const loadRestaurant = useCallback(async (userId: string | undefined) => {
     if (!userId) {
       setRestaurant(null);
+      setIsPlatformAdmin(false);
       return;
     }
-    const { data } = await supabase
-      .from("restaurants")
-      .select("*")
-      .eq("owner_id", userId)
-      .maybeSingle();
+    const [{ data }, { data: admin }] = await Promise.all([
+      supabase.from("restaurants").select("*").eq("owner_id", userId).maybeSingle(),
+      supabase.rpc("is_platform_admin"),
+    ]);
     setRestaurant((data as Restaurant) ?? null);
+    setIsPlatformAdmin(Boolean(admin));
   }, []);
 
   useEffect(() => {
@@ -75,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ session, restaurant, loading, refreshRestaurant, signOut }}
+      value={{ session, restaurant, isPlatformAdmin, loading, refreshRestaurant, signOut }}
     >
       {children}
     </AuthContext.Provider>

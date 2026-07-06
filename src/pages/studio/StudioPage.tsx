@@ -33,6 +33,7 @@ import {
 import { boardDimensions } from "../../templates/shared";
 import { StudioElementView, scaffoldStudio } from "../../templates/StudioBoard";
 import Toggle from "../../components/Toggle";
+import { deleteMenuImageUrl, uploadMenuImage } from "../../lib/uploadImage";
 
 type SectionWithItems = MenuSection & { items: MenuItem[] };
 
@@ -214,15 +215,16 @@ export default function StudioPage() {
     });
   }
 
-  async function uploadStudioImage(file: File) {
-    const ext = file.name.split(".").pop() ?? "jpg";
-    const path = `${restaurant!.id}/studio-${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("menu-images").upload(path, file, { upsert: true });
-    if (error) {
-      alert(`Upload failed: ${error.message}`);
+  async function uploadStudioImage(file: File, forBackground = false) {
+    try {
+      const path = `${restaurant!.id}/studio-${Date.now()}.jpg`;
+      const publicUrl = await uploadMenuImage(path, file);
+      if (forBackground) void deleteMenuImageUrl(config?.backgroundImage);
+      return publicUrl;
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Upload failed");
       return null;
     }
-    return supabase.storage.from("menu-images").getPublicUrl(path).data.publicUrl;
   }
 
   /* ------------------------------ render ---------------------------- */
@@ -480,7 +482,7 @@ export default function StudioPage() {
                 const f = e.target.files?.[0];
                 e.target.value = "";
                 if (!f) return;
-                const url = await uploadStudioImage(f);
+                const url = await uploadStudioImage(f, true);
                 if (url) patchCfg({ backgroundImage: url });
               }}
             />

@@ -5,6 +5,11 @@ import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import type { ScreenContent } from "../../lib/types";
 import MenuBoard, { boardDimensions } from "../../templates/MenuBoard";
 import Logo, { SyncIcon } from "../../components/Logo";
+import {
+  collectScreenImageUrls,
+  preloadImages,
+  warmImageCache,
+} from "../../lib/imageCache";
 
 const DEVICE_KEY = "syncmenu.device";
 const CONTENT_KEY = "syncmenu.content";
@@ -287,7 +292,15 @@ function ContentView({
       onRevoked();
       return;
     }
+    if (next.status === "suspended" || next.status === "trial_expired") {
+      setOffline(false);
+      setContent(next);
+      return;
+    }
     setOffline(false);
+    const urls = collectScreenImageUrls(next);
+    void warmImageCache(urls);
+    await preloadImages(urls);
     const prev = contentRef.current;
     const changed = prev && JSON.stringify(prev.slides) !== JSON.stringify(next.slides);
     setContent(next);
@@ -353,6 +366,30 @@ function ContentView({
     );
   }
 
+  if (content.status === "suspended") {
+    return (
+      <CenterScreen>
+        <SyncIcon size={64} />
+        <p className="mt-8 text-2xl font-semibold text-white">Account suspended</p>
+        <p className="mt-2 max-w-md text-white/60">
+          This screen is paused. The restaurant owner needs to contact SyncMenu support.
+        </p>
+      </CenterScreen>
+    );
+  }
+
+  if (content.status === "trial_expired") {
+    return (
+      <CenterScreen>
+        <SyncIcon size={64} />
+        <p className="mt-8 text-2xl font-semibold text-white">Subscription required</p>
+        <p className="mt-2 max-w-md text-white/60">
+          The free trial has ended. Subscribe in the dashboard to bring this screen back live.
+        </p>
+      </CenterScreen>
+    );
+  }
+
   if (!slide) {
     return (
       <CenterScreen>
@@ -375,7 +412,7 @@ function ContentView({
   return (
     <div className="fixed inset-0 flex cursor-none items-center justify-center overflow-hidden bg-black">
       <div
-        key={`${slide.menu.id}-${slideIndex}`}
+        key={slide.menu.id}
         className={slide.transition === "slide-up" ? "anim-slide-up" : "anim-fade"}
         style={{
           width,
@@ -396,6 +433,7 @@ function ContentView({
           templateId={slide.menu.template_id}
           config={slide.menu.template_config}
           orientation={orientation}
+          priority
         />
       </div>
       {pulse && (

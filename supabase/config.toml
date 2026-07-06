@@ -4,3 +4,9 @@ project_id = "hhncgqdqnznnlcoswmrm"
 # Signature verification inside the function is the auth.
 [functions.stripe-webhook]
 verify_jwt = false
+
+[functions.on-user-created]
+verify_jwt = false
+
+[functions.unsubscribe]
+verify_jwt = false

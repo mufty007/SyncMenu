@@ -31,6 +31,15 @@ const HubPage = lazy(() => import("./pages/HubPage"));
 const PublicPagePage = lazy(() => import("./pages/dashboard/PublicPagePage"));
 const TvSetupPage = lazy(() => import("./pages/dashboard/TvSetupPage"));
 const PrintQrPage = lazy(() => import("./pages/PrintQrPage"));
+const PlatformLayout = lazy(() => import("./pages/platform/PlatformLayout"));
+const PlatformOverviewPage = lazy(() => import("./pages/platform/PlatformOverviewPage"));
+const TenantsPage = lazy(() => import("./pages/platform/TenantsPage"));
+const TenantDetailPage = lazy(() => import("./pages/platform/TenantDetailPage"));
+const PlatformBillingPage = lazy(() => import("./pages/platform/PlatformBillingPage"));
+const EmailsPage = lazy(() => import("./pages/platform/EmailsPage"));
+const AdminsPage = lazy(() => import("./pages/platform/AdminsPage"));
+const AuditPage = lazy(() => import("./pages/platform/AuditPage"));
+const UnsubscribePage = lazy(() => import("./pages/UnsubscribePage"));
 
 function Spinner() {
   return (
@@ -50,6 +59,20 @@ function Protected({ children }: { children: ReactNode }) {
   }
   if (!restaurant && location.pathname !== "/onboarding") {
     return <Navigate to="/onboarding" replace />;
+  }
+  return <>{children}</>;
+}
+
+function PlatformProtected({ children }: { children: ReactNode }) {
+  const { session, isPlatformAdmin, loading } = useAuth();
+  const location = useLocation();
+  if (!isSupabaseConfigured) return <SetupNotice />;
+  if (loading) return <Spinner />;
+  if (!session) {
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+  }
+  if (!isPlatformAdmin) {
+    return <Navigate to="/app" replace />;
   }
   return <>{children}</>;
 }
@@ -134,6 +157,23 @@ export default function App() {
           </Protected>
         }
       />
+      <Route path="/unsubscribe" element={<UnsubscribePage />} />
+      <Route
+        path="/platform"
+        element={
+          <PlatformProtected>
+            <PlatformLayout />
+          </PlatformProtected>
+        }
+      >
+        <Route index element={<PlatformOverviewPage />} />
+        <Route path="tenants" element={<TenantsPage />} />
+        <Route path="tenants/:id" element={<TenantDetailPage />} />
+        <Route path="billing" element={<PlatformBillingPage />} />
+        <Route path="emails" element={<EmailsPage />} />
+        <Route path="admins" element={<AdminsPage />} />
+        <Route path="audit" element={<AuditPage />} />
+      </Route>
       <Route path="/play" element={<PlayerPage />} />
       <Route path="/m/:menuId" element={<PublicMenuPage />} />
       <Route path="/r/:restaurantId" element={<HubPage />} />
