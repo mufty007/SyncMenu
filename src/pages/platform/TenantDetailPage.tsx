@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarPlus,
+  ExternalLink,
+  ShieldBan,
+  ShieldCheck,
+} from "lucide-react";
 import { supabase } from "../../lib/supabase";
+import { StatusBadge } from "./ui";
 
 interface TenantDetail {
   id: string;
@@ -38,16 +45,18 @@ export default function TenantDetailPage() {
     if (id) void load();
   }, [id]);
 
-  if (!tenant) return <p className="text-sm text-smoke">Loading…</p>;
-
   async function suspend(suspendAccount: boolean) {
     if (!tenant) return;
+    if (suspendAccount && !confirm(`Suspend "${tenant.name}"? Their screens will stop displaying.`)) {
+      return;
+    }
     setBusy(true);
     await supabase.rpc("admin_suspend_tenant", {
       p_id: tenant.id,
       p_suspend: suspendAccount,
       p_reason: reason || null,
     });
+    setReason("");
     setBusy(false);
     void load();
   }
@@ -60,50 +69,78 @@ export default function TenantDetailPage() {
     void load();
   }
 
+  if (!tenant) {
+    return (
+      <div>
+        <Link to="/platform/tenants" className="btn-ghost -ml-3">
+          <ArrowLeft size={16} /> All tenants
+        </Link>
+        <div className="mt-6 h-40 animate-pulse rounded-2xl bg-mist/40" />
+      </div>
+    );
+  }
+
+  const suspended = tenant.status === "suspended";
   const stripeUrl = tenant.subscription?.stripe_customer_id
     ? `https://dashboard.stripe.com/test/customers/${tenant.subscription.stripe_customer_id}`
     : null;
 
+  const rows: [string, React.ReactNode][] = [
+    ["Status", <StatusBadge status={tenant.status} />],
+    ["Owner", tenant.owner_email],
+    ["Signed up", new Date(tenant.created_at).toLocaleDateString()],
+    ["Trial ends", new Date(tenant.trial_ends_at).toLocaleDateString()],
+    ["Screens / menus", `${tenant.screen_count} / ${tenant.menu_count}`],
+    [
+      "Subscription",
+      <span className="inline-flex items-center gap-2">
+        <StatusBadge status={tenant.subscription?.status ?? "none"} />
+        {tenant.subscription?.plan_id && (
+          <span className="text-xs capitalize text-smoke">{tenant.subscription.plan_id}</span>
+        )}
+      </span>,
+    ],
+  ];
+
   return (
     <div>
-      <Link to="/platform/tenants" className="btn-ghost">
+      <Link to="/platform/tenants" className="btn-ghost -ml-3">
         <ArrowLeft size={16} /> All tenants
       </Link>
-      <h1 className="mt-4 text-2xl font-semibold">{tenant.name}</h1>
-      <p className="text-sm text-smoke">{tenant.owner_email}</p>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-2">
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <h1 className="text-2xl font-semibold">{tenant.name}</h1>
+        <StatusBadge status={tenant.status} />
+      </div>
+
+      {suspended && (
+        <div className="mt-4 rounded-xl border border-alert/30 bg-alert/5 p-4 text-sm">
+          <p className="font-medium text-alert">Account suspended</p>
+          <p className="mt-1 text-smoke">
+            {tenant.suspended_reason || "No reason recorded."}
+            {tenant.suspended_at &&
+              ` — ${new Date(tenant.suspended_at).toLocaleString()}`}
+          </p>
+        </div>
+      )}
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <div className="card p-6">
           <h2 className="font-semibold">Account</h2>
-          <dl className="mt-4 space-y-2 text-sm">
-            <div className="flex justify-between">
-              <dt className="text-smoke">Status</dt>
-              <dd className="capitalize">{tenant.status}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-smoke">Trial ends</dt>
-              <dd>{new Date(tenant.trial_ends_at).toLocaleDateString()}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-smoke">Screens / menus</dt>
-              <dd>
-                {tenant.screen_count} / {tenant.menu_count}
-              </dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-smoke">Subscription</dt>
-              <dd className="capitalize">
-                {tenant.subscription?.status ?? "none"}
-                {tenant.subscription?.plan_id ? ` (${tenant.subscription.plan_id})` : ""}
-              </dd>
-            </div>
+          <dl className="mt-4 space-y-3 text-sm">
+            {rows.map(([label, value]) => (
+              <div key={label} className="flex items-center justify-between gap-4">
+                <dt className="text-smoke">{label}</dt>
+                <dd className="text-right">{value}</dd>
+              </div>
+            ))}
           </dl>
           {stripeUrl && (
             <a
               href={stripeUrl}
               target="_blank"
               rel="noreferrer"
-              className="btn-secondary mt-4 inline-flex"
+              className="btn-secondary mt-5 inline-flex"
             >
               <ExternalLink size={16} /> Open in Stripe
             </a>
@@ -112,44 +149,60 @@ export default function TenantDetailPage() {
 
         <div className="card p-6">
           <h2 className="font-semibold">Actions</h2>
-          <div className="mt-4 space-y-4">
-            <div>
-              <label className="label">Extend trial (days)</label>
-              <div className="flex gap-2">
-                <input
-                  type="number"
-                  min={1}
-                  max={365}
-                  className="input w-24"
-                  value={days}
-                  onChange={(e) => setDays(Number(e.target.value))}
-                />
-                <button className="btn-secondary" disabled={busy} onClick={() => void extendTrial()}>
-                  Extend
-                </button>
-              </div>
+
+          <div className="mt-4">
+            <label className="label">Extend trial</label>
+            <div className="flex gap-2">
+              <input
+                type="number"
+                min={1}
+                max={365}
+                className="input w-24"
+                value={days}
+                onChange={(e) => setDays(Number(e.target.value))}
+              />
+              <span className="flex items-center text-sm text-smoke">days</span>
+              <button
+                className="btn-secondary ml-auto"
+                disabled={busy}
+                onClick={() => void extendTrial()}
+              >
+                <CalendarPlus size={16} /> Extend
+              </button>
             </div>
-            {tenant.status === "active" ? (
-              <div>
-                <label className="label">Suspend reason (optional)</label>
+          </div>
+
+          <div className="mt-6 border-t border-mist pt-6">
+            {suspended ? (
+              <>
+                <p className="text-sm text-smoke">
+                  Restore this account so screens display again.
+                </p>
+                <button
+                  className="btn-primary mt-3"
+                  disabled={busy}
+                  onClick={() => void suspend(false)}
+                >
+                  <ShieldCheck size={16} /> Unsuspend account
+                </button>
+              </>
+            ) : (
+              <>
+                <label className="label text-alert">Suspend account</label>
                 <input
                   className="input"
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
-                  placeholder="Policy violation, non-payment…"
+                  placeholder="Reason (optional) — non-payment, policy…"
                 />
                 <button
-                  className="btn-primary mt-2 bg-alert hover:bg-alert"
+                  className="mt-3 inline-flex items-center justify-center gap-2 rounded-xl bg-alert px-5 py-2.5 text-sm font-medium text-white transition-colors hover:opacity-90 disabled:opacity-50"
                   disabled={busy}
                   onClick={() => void suspend(true)}
                 >
-                  Suspend account
+                  <ShieldBan size={16} /> Suspend account
                 </button>
-              </div>
-            ) : (
-              <button className="btn-primary" disabled={busy} onClick={() => void suspend(false)}>
-                Unsuspend account
-              </button>
+              </>
             )}
           </div>
         </div>

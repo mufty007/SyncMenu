@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { Download, Send } from "lucide-react";
+import { Download, Mail, Send } from "lucide-react";
 import { supabase } from "../../lib/supabase";
+import { EmptyState, PageHeader, StatusBadge } from "./ui";
 
 interface Campaign {
   id: string;
@@ -109,15 +110,15 @@ export default function EmailsPage() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">Emails</h1>
-          <p className="mt-1 text-sm text-smoke">Welcome emails are automatic. Compose platform announcements here.</p>
-        </div>
-        <button className="btn-secondary" onClick={() => void exportEmails()}>
-          <Download size={16} /> Export email list
-        </button>
-      </div>
+      <PageHeader
+        title="Emails"
+        subtitle="Welcome emails are automatic. Compose platform announcements here."
+        actions={
+          <button className="btn-secondary" onClick={() => void exportEmails()}>
+            <Download size={16} /> Export email list
+          </button>
+        }
+      />
 
       <div className="card mt-8 p-6">
         <h2 className="font-semibold">Compose announcement</h2>
@@ -174,17 +175,31 @@ export default function EmailsPage() {
             </tr>
           </thead>
           <tbody>
-            {campaigns.map((c) => (
-              <tr key={c.id} className="border-b border-mist last:border-0">
-                <td className="px-4 py-3">{c.subject}</td>
-                <td className="px-4 py-3 capitalize">{c.audience}</td>
-                <td className="px-4 py-3 capitalize">{c.status}</td>
-                <td className="px-4 py-3 tabular-nums">{c.recipient_count ?? "—"}</td>
-                <td className="px-4 py-3 text-smoke">
-                  {c.sent_at ? new Date(c.sent_at).toLocaleString() : "—"}
+            {campaigns.length === 0 ? (
+              <tr>
+                <td colSpan={5}>
+                  <EmptyState
+                    icon={Mail}
+                    title="No announcements yet"
+                    hint="Compose one above to reach your owners."
+                  />
                 </td>
               </tr>
-            ))}
+            ) : (
+              campaigns.map((c) => (
+                <tr key={c.id} className="border-b border-mist last:border-0 hover:bg-cloud/40">
+                  <td className="px-4 py-3 font-medium">{c.subject}</td>
+                  <td className="px-4 py-3 capitalize">{c.audience}</td>
+                  <td className="px-4 py-3">
+                    <StatusBadge status={c.status} />
+                  </td>
+                  <td className="px-4 py-3 tabular-nums">{c.recipient_count ?? "—"}</td>
+                  <td className="px-4 py-3 text-smoke">
+                    {c.sent_at ? new Date(c.sent_at).toLocaleString() : "—"}
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
