@@ -1,0 +1,6 @@
+project_id = "hhncgqdqnznnlcoswmrm"
+
+# Stripe calls this endpoint directly — no Supabase JWT on the request.
+# Signature verification inside the function is the auth.
+[functions.stripe-webhook]
+verify_jwt = false

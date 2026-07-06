@@ -1,0 +1,160 @@
+@import "tailwindcss";
+
+@theme {
+  /* SyncMenu brand palette */
+  --color-brand: #ff6b2c; /* Sync Orange */
+  --color-ember: #e4501a; /* Deep Ember (hover/pressed) */
+  --color-ink: #1f2933; /* Charcoal */
+  --color-smoke: #52606d; /* Slate */
+  --color-mist: #e4e7eb;
+  --color-cloud: #f5f7fa;
+  --color-live: #22b573;
+  --color-alert: #e5484d;
+  --color-amber: #ffb020;
+
+  --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif;
+  /* UI uses Poppins everywhere; display fonts remain available to menu
+     board templates only (they're restaurant content, not app UI). */
+  --font-display: "Poppins", ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-cloud);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-sm font-medium text-white transition-colors duration-200 hover:bg-ember disabled:pointer-events-none disabled:opacity-50;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-mist bg-white px-5 py-2.5 text-sm font-medium text-ink transition-colors duration-200 hover:border-smoke/40 hover:bg-cloud disabled:pointer-events-none disabled:opacity-50;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-smoke transition-colors duration-200 hover:bg-mist/60 hover:text-ink disabled:pointer-events-none disabled:opacity-50;
+  }
+  .input {
+    @apply w-full rounded-xl border border-mist bg-white px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-150 placeholder:text-smoke/50 focus:border-brand;
+  }
+  .card {
+    @apply rounded-2xl border border-mist/70 bg-white;
+  }
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-ink;
+  }
+}
+
+/* Player slide transitions */
+@keyframes slide-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes slide-up-in {
+  from {
+    opacity: 0;
+    transform: translateY(48px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.anim-fade {
+  animation: slide-fade-in 400ms ease-out both;
+}
+.anim-slide-up {
+  animation: slide-up-in 350ms ease-out both;
+}
+
+/* Scroll-reveal animations (marketing pages) */
+.reveal {
+  opacity: 0;
+  transform: translateY(26px);
+  transition:
+    opacity 650ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 650ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+.reveal-visible {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Gentle card lift */
+.lift {
+  transition:
+    transform 200ms ease-out,
+    box-shadow 200ms ease-out;
+}
+.lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(31, 41, 51, 0.1);
+}
+
+/* Print kit (QR posters, tents, stickers) */
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+  body {
+    background: white;
+  }
+  .print-hide {
+    display: none !important;
+  }
+  .print-sheet {
+    box-shadow: none !important;
+  }
+}
+
+/* Hide scrollbars on horizontal chip rows */
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Footer ticker (menu boards) */
+@keyframes sm-ticker {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Signature sync pulse */
+@keyframes sync-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 107, 44, 0.55);
+  }
+  100% {
+    box-shadow: 0 0 0 18px rgba(255, 107, 44, 0);
+  }
+}
+.sync-pulse {
+  animation: sync-pulse 700ms ease-out;
+}

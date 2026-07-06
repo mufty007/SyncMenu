@@ -1,0 +1,25 @@
+{
+  "name": "SyncMenu Player",
+  "short_name": "SyncMenu",
+  "description": "Digital menu board player — displays your SyncMenu boards fullscreen and updates in real time.",
+  "start_url": "/play",
+  "scope": "/",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#1F2933",
+  "theme_color": "#FF6B2C",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
