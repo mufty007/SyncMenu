@@ -206,13 +206,13 @@ export default function Landing() {
       <SiteHeader />
 
       {/* hero */}
-      <section className="mx-auto max-w-6xl px-6 pb-24 pt-16 text-center">
+      <section className="mx-auto max-w-6xl px-4 pb-20 pt-12 text-center sm:px-6 sm:pb-24 sm:pt-16">
         <Reveal>
           <span className="inline-flex items-center gap-2 rounded-full border border-mist bg-cloud px-4 py-1.5 text-xs font-medium text-smoke">
             <span className="h-1.5 w-1.5 rounded-full bg-live" />
             Digital menu boards for independent restaurants
           </span>
-          <h1 className="font-display mx-auto mt-6 max-w-3xl text-5xl font-bold leading-[1.08] tracking-tight md:text-7xl">
+          <h1 className="font-display mx-auto mt-6 max-w-3xl text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl md:text-7xl">
             Your menu. Every screen.{" "}
             <span className="text-brand">Always in sync.</span>
           </h1>

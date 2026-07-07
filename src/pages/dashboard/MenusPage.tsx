@@ -3,7 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { Copy, Plus, MonitorSmartphone } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../context/AuthContext";
-import { PLAN_LIMITS, type Menu } from "../../lib/types";
+import { usePlanLimits } from "../../lib/usePlanLimits";
+import type { Menu } from "../../lib/types";
 import { TEMPLATES } from "../../templates/MenuBoard";
 import { timeAgo } from "../../lib/format";
 
@@ -13,6 +14,7 @@ export default function MenusPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { menus: menuLimit } = usePlanLimits();
 
   useEffect(() => {
     if (!restaurant) return;
@@ -26,8 +28,8 @@ export default function MenusPage() {
 
   async function duplicateMenu(source: Menu) {
     if (!restaurant || busy) return;
-    if ((menus?.length ?? 0) >= PLAN_LIMITS.menus) {
-      setError(`Your plan includes up to ${PLAN_LIMITS.menus} saved menus.`);
+    if ((menus?.length ?? 0) >= menuLimit) {
+      setError(`Your plan includes up to ${menuLimit} saved menus.`);
       return;
     }
     setBusy(true);
@@ -80,8 +82,8 @@ export default function MenusPage() {
 
   async function createMenu() {
     if (!restaurant || busy) return;
-    if ((menus?.length ?? 0) >= PLAN_LIMITS.menus) {
-      setError(`Your plan includes up to ${PLAN_LIMITS.menus} saved menus.`);
+    if ((menus?.length ?? 0) >= menuLimit) {
+      setError(`Your plan includes up to ${menuLimit} saved menus.`);
       return;
     }
     setBusy(true);

@@ -164,7 +164,8 @@ export default function EmailsPage() {
 
       <div className="card mt-8 overflow-hidden">
         <h2 className="border-b border-mist px-4 py-3 font-semibold">Campaign history</h2>
-        <table className="w-full text-left text-sm">
+        <div className="table-scroll">
+        <table className="w-full min-w-[560px] text-left text-sm">
           <thead className="border-b border-mist bg-cloud/50 text-smoke">
             <tr>
               <th className="px-4 py-3 font-medium">Subject</th>
@@ -202,6 +203,7 @@ export default function EmailsPage() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

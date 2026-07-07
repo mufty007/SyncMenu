@@ -48,6 +48,12 @@ body {
   .label {
     @apply mb-1.5 block text-sm font-medium text-ink;
   }
+  .table-scroll {
+    @apply overflow-x-auto;
+  }
+  .page-title {
+    @apply text-xl font-semibold sm:text-2xl;
+  }
 }
 
 /* Player slide transitions */

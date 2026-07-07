@@ -1,21 +1,32 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
+import { Menu, X } from "lucide-react";
 import Logo from "./Logo";
 
+const MOBILE_LINKS = [
+  { to: "/#features", label: "Features" },
+  { to: "/#pricing", label: "Pricing" },
+  { to: "/contact", label: "Contact" },
+];
+
 export function SiteHeader() {
+  const [open, setOpen] = useState(false);
+
   return (
     <header className="sticky top-0 z-40 border-b border-mist/60 bg-white/85 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <Link to="/">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
+        <Link to="/" onClick={() => setOpen(false)}>
           <Logo size={30} />
         </Link>
-        <nav className="flex items-center gap-1 sm:gap-2">
-          <Link to="/#features" className="btn-ghost hidden sm:inline-flex">
+
+        <nav className="hidden items-center gap-1 sm:flex sm:gap-2">
+          <Link to="/#features" className="btn-ghost">
             Features
           </Link>
-          <Link to="/#pricing" className="btn-ghost hidden sm:inline-flex">
+          <Link to="/#pricing" className="btn-ghost">
             Pricing
           </Link>
-          <Link to="/contact" className="btn-ghost hidden sm:inline-flex">
+          <Link to="/contact" className="btn-ghost">
             Contact
           </Link>
           <Link to="/login" className="btn-ghost">
@@ -25,7 +36,48 @@ export function SiteHeader() {
             Start free trial
           </Link>
         </nav>
+
+        <div className="flex items-center gap-2 sm:hidden">
+          <Link to="/signup" className="btn-primary px-3 py-2 text-xs">
+            Try free
+          </Link>
+          <button
+            type="button"
+            className="btn-ghost px-2 py-2"
+            aria-label={open ? "Close menu" : "Open menu"}
+            onClick={() => setOpen((v) => !v)}
+          >
+            {open ? <X size={22} /> : <Menu size={22} />}
+          </button>
+        </div>
       </div>
+
+      {open && (
+        <nav className="border-t border-mist bg-white px-4 py-3 sm:hidden">
+          <ul className="space-y-1">
+            {MOBILE_LINKS.map(({ to, label }) => (
+              <li key={to}>
+                <Link
+                  to={to}
+                  className="block rounded-xl px-3 py-2.5 text-sm font-medium text-ink hover:bg-cloud"
+                  onClick={() => setOpen(false)}
+                >
+                  {label}
+                </Link>
+              </li>
+            ))}
+            <li>
+              <Link
+                to="/login"
+                className="block rounded-xl px-3 py-2.5 text-sm font-medium text-ink hover:bg-cloud"
+                onClick={() => setOpen(false)}
+              >
+                Log in
+              </Link>
+            </li>
+          </ul>
+        </nav>
+      )}
     </header>
   );
 }
@@ -33,7 +85,7 @@ export function SiteHeader() {
 export function SiteFooter() {
   return (
     <footer className="border-t border-mist bg-cloud">
-      <div className="mx-auto grid max-w-6xl gap-10 px-6 py-14 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-6 sm:py-14 sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <Logo size={24} />
           <p className="mt-3 max-w-xs text-sm leading-relaxed text-smoke">
@@ -97,7 +149,7 @@ export function SiteFooter() {
         </div>
       </div>
       <div className="border-t border-mist/60">
-        <p className="mx-auto max-w-6xl px-6 py-5 text-xs text-smoke">
+        <p className="mx-auto max-w-6xl px-4 py-5 text-xs text-smoke sm:px-6">
           Menus in sync. © {new Date().getFullYear()} SyncMenu
         </p>
       </div>

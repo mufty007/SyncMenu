@@ -20,7 +20,7 @@ updates in real time. See `prd.md` (product spec) and `brand-guide.md`
    tier works).
 
 3. **Run the migrations**: open the Supabase SQL editor and run, in order,
-   `supabase/migrations/0001_init.sql` through `0006_enforcement.sql`.
+   `supabase/migrations/0001_init.sql` through `0007_plan_pricing_limits.sql`.
 
 4. **Configure env**: copy `.env.example` to `.env` and fill in your project
    URL and anon key (Project Settings → API).

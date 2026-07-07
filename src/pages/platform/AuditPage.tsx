@@ -46,7 +46,7 @@ export default function AuditPage() {
 
       <div className="card mt-8 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="w-full min-w-[560px] text-left text-sm">
             <thead className="border-b border-mist bg-cloud/50 text-xs uppercase tracking-wide text-smoke">
               <tr>
                 <th className="px-4 py-3 font-medium">When</th>
@@ -107,7 +107,7 @@ export default function AuditPage() {
                 })
               )}
             </tbody>
-          </table>
+        </table>
         </div>
       </div>
     </div>

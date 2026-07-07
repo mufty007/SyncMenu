@@ -5,7 +5,8 @@ export const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
   httpClient: Stripe.createFetchHttpClient(),
 });
 
-/** plan + interval → Stripe price. Server-side allowlist; never trust client price IDs. */
+/** plan + interval → Stripe price. Server-side allowlist; never trust client price IDs.
+ *  Create matching $15 / $30 / $99 products in Stripe and paste new price IDs here. */
 export const PRICES: Record<string, Record<string, string>> = {
   starter: {
     monthly: "price_1TpxtAEIKu2buCASGf6RCPtc",

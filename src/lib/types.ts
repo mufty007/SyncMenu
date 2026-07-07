@@ -296,18 +296,18 @@ export interface SlidePayload {
 }
 
 export const PLAN_LIMITS = {
-  screens: 2,
+  screens: 5,
   menus: 10,
   templates: 5,
   storageMb: 100,
 };
 
-/** Per-plan limits — keep in sync with SQL helpers in migration 0006. */
+/** Per-plan limits — keep in sync with SQL in migration 0007. */
 export const PLAN_LIMITS_BY_PLAN: Record<string, { screens: number; menus: number }> = {
   starter: { screens: 1, menus: 5 },
-  growth: { screens: 2, menus: 10 },
-  pro: { screens: 5, menus: 999 },
-  trial: { screens: 2, menus: 10 },
+  growth: { screens: 5, menus: 10 },
+  pro: { screens: 10, menus: 999 },
+  trial: { screens: 5, menus: 10 },
 };
 
 export interface Subscription {
@@ -336,8 +336,8 @@ export const PLANS: Plan[] = [
     id: "starter",
     name: "Starter",
     tagline: "One screen, done right",
-    monthly: 29,
-    annualMonthly: 24,
+    monthly: 15,
+    annualMonthly: 12,
     perks: [
       "1 screen",
       "5 saved menus",
@@ -350,12 +350,12 @@ export const PLANS: Plan[] = [
   {
     id: "growth",
     name: "Growth",
-    tagline: "For the counter and the window",
-    monthly: 50,
-    annualMonthly: 42,
+    tagline: "For the counter, kitchen & window",
+    monthly: 30,
+    annualMonthly: 25,
     popular: true,
     perks: [
-      "2 screens",
+      "Up to 5 screens",
       "10 saved menus",
       "All templates + design studio",
       "Playlists & timed rotation",
@@ -367,11 +367,11 @@ export const PLANS: Plan[] = [
   {
     id: "pro",
     name: "Pro",
-    tagline: "Multiple screens, zero hassle",
+    tagline: "Every screen in the shop",
     monthly: 99,
-    annualMonthly: 84,
+    annualMonthly: 82,
     perks: [
-      "5 screens",
+      "Up to 10 screens",
       "Unlimited saved menus",
       "Everything in Growth",
       "Priority support",

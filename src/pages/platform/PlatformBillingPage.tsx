@@ -67,7 +67,7 @@ export default function PlatformBillingPage() {
 
       <div className="card mt-6 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="w-full min-w-[720px] text-left text-sm">
             <thead className="border-b border-mist bg-cloud/50 text-xs uppercase tracking-wide text-smoke">
               <tr>
                 <th className="px-4 py-3 font-medium">Restaurant</th>
@@ -135,7 +135,7 @@ export default function PlatformBillingPage() {
                 ))
               )}
             </tbody>
-          </table>
+        </table>
         </div>
       </div>
     </div>

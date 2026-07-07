@@ -3,12 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { MonitorPlay, Plus, Trash2 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../context/AuthContext";
-import {
-  PLAN_LIMITS,
-  type Menu,
-  type Playlist,
-  type Screen,
-} from "../../lib/types";
+import { usePlanLimits } from "../../lib/usePlanLimits";
+import type { Menu, Playlist, Screen } from "../../lib/types";
 import { isScreenOnline, timeAgo } from "../../lib/format";
 
 export default function ScreensPage() {
@@ -66,11 +62,12 @@ export default function ScreensPage() {
   }
 
   const playerUrl = `${window.location.origin}/play`;
-  const atLimit = (screens?.length ?? 0) >= PLAN_LIMITS.screens;
+  const { screens: screenLimit } = usePlanLimits();
+  const atLimit = (screens?.length ?? 0) >= screenLimit;
 
   return (
     <div>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">Screens</h1>
           <p className="mt-1 text-sm text-smoke">
@@ -83,7 +80,7 @@ export default function ScreensPage() {
       </div>
       {atLimit && (
         <p className="mt-3 text-sm text-smoke">
-          Your plan includes up to {PLAN_LIMITS.screens} screens.
+          Your plan includes up to {screenLimit} screen{screenLimit === 1 ? "" : "s"}.
         </p>
       )}
 
