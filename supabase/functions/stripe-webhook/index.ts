@@ -72,6 +72,7 @@ Deno.serve(async (req) => {
         }
         break;
       }
+      case "customer.subscription.created":
       case "customer.subscription.updated":
       case "customer.subscription.deleted":
         await syncSubscription(event.data.object as Stripe.Subscription);

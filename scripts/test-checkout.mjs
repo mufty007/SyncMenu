@@ -1,4 +1,5 @@
 // Smoke test: sign in as demo and create a Stripe checkout session.
+// For full coverage run: node scripts/test-stripe-integration.mjs
 import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 

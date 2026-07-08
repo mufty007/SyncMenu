@@ -1,24 +1,34 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Check, ExternalLink } from "lucide-react";
+import BillingIntervalToggle from "../../components/BillingIntervalToggle";
 import { supabase } from "../../lib/supabase";
+import {
+  isValidPlanId,
+  parseBillingParams,
+  type BillingInterval,
+} from "../../lib/billingParams";
 import { useAuth } from "../../context/AuthContext";
 import { trialDaysLeft } from "../../lib/format";
 import { PLANS, type Subscription } from "../../lib/types";
 
-type Interval = "monthly" | "yearly";
-
 export default function BillingPage() {
   const { restaurant } = useAuth();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const [sub, setSub] = useState<Subscription | null>(null);
   const [loaded, setLoaded] = useState(false);
-  const [interval, setInterval_] = useState<Interval>("monthly");
+  const billingFromUrl = parseBillingParams(params);
+  const [interval, setInterval_] = useState<BillingInterval>(billingFromUrl.interval);
   const [busyPlan, setBusyPlan] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const autoCheckoutStarted = useRef(false);
 
   const daysLeft = restaurant ? trialDaysLeft(restaurant.trial_ends_at) : 0;
   const justSucceeded = params.get("success") === "1";
+
+  useEffect(() => {
+    setInterval_(billingFromUrl.interval);
+  }, [billingFromUrl.interval]);
 
   useEffect(() => {
     if (!restaurant) return;
@@ -50,6 +60,25 @@ export default function BillingPage() {
       return;
     }
     window.location.href = data.url as string;
+  }
+
+  useEffect(() => {
+    if (!loaded || active || autoCheckoutStarted.current) return;
+    if (!billingFromUrl.checkout || !billingFromUrl.plan) return;
+    if (!isValidPlanId(billingFromUrl.plan)) return;
+
+    autoCheckoutStarted.current = true;
+    const next = new URLSearchParams(params);
+    next.delete("checkout");
+    setParams(next, { replace: true });
+    void subscribe(billingFromUrl.plan);
+  }, [loaded, active, billingFromUrl.checkout, billingFromUrl.plan, params, setParams, interval]);
+
+  function handleIntervalChange(next: BillingInterval) {
+    setInterval_(next);
+    const nextParams = new URLSearchParams(params);
+    nextParams.set("interval", next);
+    setParams(nextParams, { replace: true });
   }
 
   async function openPortal() {
@@ -118,26 +147,7 @@ export default function BillingPage() {
       </div>
 
       {!active && loaded && (
-        <div className="mt-6 flex justify-center">
-          <div className="inline-flex rounded-xl border border-mist bg-white p-1">
-            {(
-              [
-                ["monthly", "Monthly"],
-                ["yearly", "Annual — save ~15%"],
-              ] as const
-            ).map(([value, label]) => (
-              <button
-                key={value}
-                onClick={() => setInterval_(value)}
-                className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${
-                  interval === value ? "bg-brand text-white" : "text-smoke hover:text-ink"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
+        <BillingIntervalToggle value={interval} onChange={handleIntervalChange} className="mt-6" />
       )}
 
       {error && <p className="mt-4 text-sm text-alert">{error}</p>}

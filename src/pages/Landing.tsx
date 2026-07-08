@@ -11,10 +11,12 @@ import {
   X,
   Zap,
 } from "lucide-react";
+import BillingIntervalToggle from "../components/BillingIntervalToggle";
 import ScaledFrame from "../components/ScaledFrame";
 import MenuBoard from "../templates/MenuBoard";
 import Reveal from "../components/Reveal";
 import { SiteFooter, SiteHeader } from "../components/SiteChrome";
+import { planCheckoutPath, type BillingInterval } from "../lib/billingParams";
 import { PLANS, type TemplateId } from "../lib/types";
 
 /* ------------------------------------------------------------------ */
@@ -185,6 +187,7 @@ const SHOWCASE: { id: TemplateId; label: string; accent: string }[] = [
 export default function Landing() {
   const [wingsPrice, setWingsPrice] = useState(5.9);
   const [pulse, setPulse] = useState(false);
+  const [billingInterval, setBillingInterval] = useState<BillingInterval>("monthly");
   const sections = useMemo(() => demoSections(wingsPrice), [wingsPrice]);
 
   function changePrice() {
@@ -430,12 +433,19 @@ export default function Landing() {
               Simple pricing. Every feature on every plan.
             </h2>
             <p className="mx-auto mt-3 max-w-md text-center text-smoke">
-              Pick by how many screens you run — upgrade any time. Save ~15%
-              when billed annually.
+              Pick by how many screens you run — upgrade any time.
             </p>
           </Reveal>
-          <div className="mt-12 grid items-start gap-6 md:grid-cols-3">
-            {PLANS.map((plan, i) => (
+          <BillingIntervalToggle
+            value={billingInterval}
+            onChange={setBillingInterval}
+            className="mt-8"
+          />
+          <div className="mt-10 grid items-start gap-6 md:grid-cols-3">
+            {PLANS.map((plan, i) => {
+              const price =
+                billingInterval === "yearly" ? plan.annualMonthly : plan.monthly;
+              return (
               <Reveal key={plan.id} delay={i * 120}>
                 <div
                   className={`card lift relative p-7 ${
@@ -450,11 +460,13 @@ export default function Landing() {
                   <p className="font-semibold">{plan.name}</p>
                   <p className="mt-0.5 text-sm text-smoke">{plan.tagline}</p>
                   <p className="mt-4">
-                    <span className="font-display text-4xl font-bold">${plan.monthly}</span>
+                    <span className="font-display text-4xl font-bold">${price}</span>
                     <span className="text-sm text-smoke">/month</span>
                   </p>
                   <p className="mt-0.5 text-xs text-smoke">
-                    ~${plan.annualMonthly}/mo billed annually
+                    {billingInterval === "yearly"
+                      ? `billed annually ($${plan.annualMonthly * 12}/yr)`
+                      : `or ~$${plan.annualMonthly}/mo billed annually`}
                   </p>
                   <ul className="mt-5 space-y-2.5">
                     {plan.perks.map((perk) => (
@@ -464,14 +476,17 @@ export default function Landing() {
                     ))}
                   </ul>
                   <Link
-                    to="/signup"
+                    to={planCheckoutPath(plan.id, billingInterval)}
                     className={`${plan.popular ? "btn-primary" : "btn-secondary"} mt-6 w-full`}
                   >
-                    Start free trial
+                    {billingInterval === "yearly"
+                      ? `Get ${plan.name} — annual`
+                      : `Get ${plan.name} — monthly`}
                   </Link>
                 </div>
               </Reveal>
-            ))}
+            );
+            })}
           </div>
         </div>
       </section>

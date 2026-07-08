@@ -1,10 +1,11 @@
 import { useMemo, useRef, useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, CheckCircle2, ImagePlus } from "lucide-react";
 import Logo from "../../components/Logo";
 import ScaledFrame from "../../components/ScaledFrame";
 import MenuBoard, { TEMPLATES } from "../../templates/MenuBoard";
 import { supabase } from "../../lib/supabase";
+import { buildBillingPath, parseBillingParams } from "../../lib/billingParams";
 import { useAuth } from "../../context/AuthContext";
 import type { TemplateId } from "../../lib/types";
 
@@ -37,6 +38,8 @@ const STARTER_SECTIONS: { name: string; items: [string, string, number][] }[] = 
 export default function Onboarding() {
   const { session, restaurant, isPlatformAdmin, refreshRestaurant } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const billingIntent = parseBillingParams(searchParams);
   const [step, setStep] = useState(0);
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -358,9 +361,16 @@ export default function Onboarding() {
               </ul>
               <button
                 className="btn-primary mt-6 w-full"
-                onClick={() => navigate("/app", { replace: true })}
+                onClick={() =>
+                  navigate(
+                    billingIntent.plan
+                      ? buildBillingPath(billingIntent)
+                      : "/app",
+                    { replace: true }
+                  )
+                }
               >
-                Open my dashboard
+                {billingIntent.plan ? "Continue to checkout" : "Open my dashboard"}
               </button>
             </div>
           )}

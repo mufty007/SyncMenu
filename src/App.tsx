@@ -55,13 +55,17 @@ function Protected({ children }: { children: ReactNode }) {
   if (!isSupabaseConfigured) return <SetupNotice />;
   if (loading) return <Spinner />;
   if (!session) {
-    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+    const from = location.pathname + location.search;
+    return <Navigate to="/login" state={{ from }} replace />;
   }
   if (!restaurant && location.pathname !== "/onboarding") {
     if (isPlatformAdmin) {
       return <Navigate to="/platform" replace />;
     }
-    return <Navigate to="/onboarding" replace />;
+    const onboardingPath = location.pathname.startsWith("/app/billing")
+      ? `/onboarding${location.search}`
+      : "/onboarding";
+    return <Navigate to={onboardingPath} replace />;
   }
   return <>{children}</>;
 }
@@ -72,7 +76,8 @@ function PlatformProtected({ children }: { children: ReactNode }) {
   if (!isSupabaseConfigured) return <SetupNotice />;
   if (loading) return <Spinner />;
   if (!session) {
-    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+    const from = location.pathname + location.search;
+    return <Navigate to="/login" state={{ from }} replace />;
   }
   if (!isPlatformAdmin) {
     return <Navigate to="/app" replace />;
