@@ -10,3 +10,7 @@ verify_jwt = false
 
 [functions.unsubscribe]
 verify_jwt = false
+
+# Daily cron invokes this with X-Cron-Secret (AUTOMATION_CRON_SECRET).
+[functions.process-email-automations]
+verify_jwt = false

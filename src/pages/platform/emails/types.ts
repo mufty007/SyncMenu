@@ -25,11 +25,13 @@ export interface EmailSettings {
   smtp_sender: string;
   site_origin: string;
   unsubscribe_secret_set: boolean;
-  welcome_subject: string;
-  welcome_html: string | null;
-  welcome_enabled: boolean;
   reply_to: string;
+  smtp_ready: boolean;
+  last_test_at: string | null;
+  last_test_ok: boolean;
 }
+
+export type SetupStatus = "not_configured" | "partial" | "ready";
 
 export interface EmailRecipient {
   user_id: string;
@@ -50,4 +52,4 @@ export interface EmailStats {
   drafts: number;
 }
 
-export type EmailTab = "recipients" | "compose" | "setup" | "history";
+export type EmailTab = "recipients" | "compose" | "setup" | "automations" | "history";

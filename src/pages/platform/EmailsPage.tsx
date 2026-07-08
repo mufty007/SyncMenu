@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { PageHeader } from "./ui";
+import AutomationsTab from "./emails/AutomationsTab";
 import ComposeTab from "./emails/ComposeTab";
 import HistoryTab from "./emails/HistoryTab";
 import RecipientsTab from "./emails/RecipientsTab";
@@ -10,6 +11,7 @@ const TABS: { id: EmailTab; label: string }[] = [
   { id: "recipients", label: "Recipients" },
   { id: "compose", label: "Compose" },
   { id: "setup", label: "Setup" },
+  { id: "automations", label: "Automations" },
   { id: "history", label: "History" },
 ];
 
@@ -27,7 +29,7 @@ export default function EmailsPage() {
     <div>
       <PageHeader
         title="Emails"
-        subtitle="Manage recipients, SMTP delivery, announcements, and campaign history."
+        subtitle="Manage recipients, SMTP delivery, automations, announcements, and campaign history."
       />
 
       <div className="mt-8 border-b border-mist">
@@ -63,6 +65,7 @@ export default function EmailsPage() {
           />
         )}
         {tab === "setup" && <SetupTab />}
+        {tab === "automations" && <AutomationsTab />}
         {tab === "history" && (
           <HistoryTab refreshKey={historyKey} onEditDraft={editDraft} />
         )}

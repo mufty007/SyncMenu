@@ -1,23 +1,50 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import type Stripe from "npm:stripe@17";
 import { json, planFromPrice, stripe } from "../_shared/stripe.ts";
+import { sendAutomation } from "../_shared/automation.ts";
 
 const admin = createClient(
   Deno.env.get("SUPABASE_URL")!,
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 );
 
-async function syncSubscription(sub: Stripe.Subscription) {
+async function ownerEmailForRestaurant(restaurantId: string): Promise<{
+  userId: string;
+  email: string;
+  restaurantName: string;
+} | null> {
+  const { data: restaurant } = await admin
+    .from("restaurants")
+    .select("owner_id, name")
+    .eq("id", restaurantId)
+    .single();
+  if (!restaurant) return null;
+
+  const { data: user } = await admin.auth.admin.getUserById(restaurant.owner_id);
+  if (!user?.user?.email) return null;
+
+  return {
+    userId: restaurant.owner_id,
+    email: user.user.email,
+    restaurantName: restaurant.name,
+  };
+}
+
+async function syncSubscription(
+  sub: Stripe.Subscription,
+  prevStatus?: string | null
+): Promise<void> {
   let restaurantId = sub.metadata?.restaurant_id as string | undefined;
   const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer.id;
 
   if (!restaurantId) {
     const { data } = await admin
       .from("subscriptions")
-      .select("restaurant_id")
+      .select("restaurant_id, status")
       .eq("stripe_customer_id", customerId)
       .maybeSingle();
     restaurantId = data?.restaurant_id;
+    if (!prevStatus && data?.status) prevStatus = data.status;
   }
   if (!restaurantId) {
     console.error(`No restaurant found for customer ${customerId}`);
@@ -25,14 +52,16 @@ async function syncSubscription(sub: Stripe.Subscription) {
   }
 
   const item = sub.items.data[0];
+  const planId =
+    (sub.metadata?.plan_id as string | undefined) ??
+    planFromPrice(item?.price) ??
+    null;
+
   await admin.from("subscriptions").upsert({
     restaurant_id: restaurantId,
     stripe_customer_id: customerId,
     stripe_subscription_id: sub.id,
-    plan_id:
-      (sub.metadata?.plan_id as string | undefined) ??
-      planFromPrice(item?.price) ??
-      null,
+    plan_id: planId,
     price_id: item?.price.id ?? null,
     status: sub.status,
     current_period_end: sub.current_period_end
@@ -40,6 +69,55 @@ async function syncSubscription(sub: Stripe.Subscription) {
       : null,
     updated_at: new Date().toISOString(),
   });
+
+  const owner = await ownerEmailForRestaurant(restaurantId);
+  if (!owner) return;
+
+  const planName =
+    planId === "starter"
+      ? "Starter"
+      : planId === "growth"
+        ? "Growth"
+        : planId === "scale"
+          ? "Scale"
+          : planId || "SyncMenu";
+
+  const vars = {
+    restaurant_name: owner.restaurantName,
+    owner_email: owner.email,
+    plan_name: planName,
+  };
+
+  const newlyActive =
+    (sub.status === "active" || sub.status === "trialing") &&
+    prevStatus !== "active" &&
+    prevStatus !== "trialing";
+
+  if (newlyActive) {
+    try {
+      await sendAutomation("subscription_confirmed", {
+        userId: owner.userId,
+        restaurantId,
+        email: owner.email,
+        vars,
+      });
+    } catch (e) {
+      console.error("subscription_confirmed automation failed", e);
+    }
+  }
+
+  if (sub.status === "past_due" && prevStatus !== "past_due") {
+    try {
+      await sendAutomation("payment_failed", {
+        userId: owner.userId,
+        restaurantId,
+        email: owner.email,
+        vars,
+      });
+    } catch (e) {
+      console.error("payment_failed automation failed", e);
+    }
+  }
 }
 
 Deno.serve(async (req) => {
@@ -74,9 +152,25 @@ Deno.serve(async (req) => {
       }
       case "customer.subscription.created":
       case "customer.subscription.updated":
-      case "customer.subscription.deleted":
-        await syncSubscription(event.data.object as Stripe.Subscription);
+      case "customer.subscription.deleted": {
+        const sub = event.data.object as Stripe.Subscription;
+        const prev = (event.data as { previous_attributes?: { status?: string } })
+          .previous_attributes?.status;
+        await syncSubscription(sub, prev ?? null);
         break;
+      }
+      case "invoice.payment_failed": {
+        const invoice = event.data.object as Stripe.Invoice;
+        const subId =
+          typeof invoice.subscription === "string"
+            ? invoice.subscription
+            : invoice.subscription?.id;
+        if (subId) {
+          const sub = await stripe.subscriptions.retrieve(subId);
+          await syncSubscription(sub, "active");
+        }
+        break;
+      }
     }
   } catch (err) {
     console.error(err);
