@@ -77,32 +77,45 @@ content is cached in localStorage so a network drop never blanks the screen.
   boot" and "Keep screen on" enabled — true fullscreen, survives power cuts.
   The in-app guide lives at `/app/setup-tv`.
 
-## Stripe billing
+## Stripe billing (Khidmah platform account)
 
-Checkout, customer portal, and webhook sync are implemented as Supabase Edge
-Functions in `supabase/functions/`. Products, prices, the webhook endpoint,
-and a portal configuration already exist in the Stripe (test-mode) account.
-To deploy the backend:
+SyncMenu billing uses a **shared Khidmah Stripe account**. Prices are loaded
+dynamically from product `prod_UqPvU72LORrOEE` by matching Stripe price
+nicknames (`Starter`, `Growth`, `Pro`, `Starter Yearly`, etc.) — no hardcoded
+price IDs in the repo.
 
-1. Run `supabase/migrations/0004_subscriptions.sql` in the SQL editor.
-2. From the project root (needs one-time interactive login):
+1. Run `supabase/migrations/0004_subscriptions.sql` (and later migrations).
+2. In the **Khidmah** Stripe account, confirm the SyncMenu product has six
+   prices with these **nicknames** (already shown in your dashboard):
+   - `Starter` ($15/mo), `Growth` ($30/mo), `Pro` ($99/mo)
+   - `Starter Yearly`, `Growth Yearly`, `Pro Yearly`
+3. Create a **webhook** pointing at your deployed `stripe-webhook` function
+   (events: `checkout.session.completed`, `customer.subscription.updated`,
+   `customer.subscription.deleted`).
+4. Set Supabase secrets and deploy:
 
    ```sh
    npx supabase login
    npx supabase link --project-ref hhncgqdqnznnlcoswmrm
-   npx supabase secrets set STRIPE_SECRET_KEY=<sk_test_...> STRIPE_WEBHOOK_SECRET=<whsec_...>
+   npx supabase secrets set \
+     STRIPE_SECRET_KEY=sk_test_... \
+     STRIPE_WEBHOOK_SECRET=whsec_... \
+     STRIPE_PRODUCT_ID=prod_UqPvU72LORrOEE \
+     STRIPE_SAAS_APP=syncmenu
    npx supabase functions deploy create-checkout-session customer-portal stripe-webhook on-user-created send-announcement unsubscribe
    ```
 
-   (`config.toml` already disables JWT verification for `stripe-webhook`;
-   Stripe's signature check is the auth there.)
+   Optional: `STRIPE_PORTAL_CONFIGURATION=bpc_...` if you created a portal
+   config in the shared account.
 
-3. Test: Billing page → Subscribe → card `4242 4242 4242 4242` → webhook marks
-   the subscription active.
+5. On **Vercel**, set `VITE_STRIPE_LIVE=false` (or `true` when you go live)
+   so platform admin “Open in Stripe” links use test vs live dashboard URLs.
 
-Going live later: swap the test keys for live keys (secrets + re-create
-products/prices/webhook in live mode and update the IDs in
-`supabase/functions/_shared/stripe.ts`).
+6. Test: Billing → Subscribe → card `4242 4242 4242 4242` → webhook syncs
+   plan to the database; platform `/platform/billing` reflects the change.
+
+Going live: swap `STRIPE_SECRET_KEY` and webhook secret for live keys, set
+`VITE_STRIPE_LIVE=true`, redeploy functions + Vercel.
 
 ## Platform admin (`/platform`)
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { CreditCard, ExternalLink } from "lucide-react";
 import { supabase } from "../../lib/supabase";
+import { stripeCustomerUrl } from "../../lib/stripeLinks";
 import { EmptyState, PageHeader, StatusBadge } from "./ui";
 
 interface SubRow {
@@ -121,7 +122,7 @@ export default function PlatformBillingPage() {
                     <td className="px-4 py-3">
                       {r.stripe_customer_id && (
                         <a
-                          href={`https://dashboard.stripe.com/test/customers/${r.stripe_customer_id}`}
+                          href={stripeCustomerUrl(r.stripe_customer_id)}
                           target="_blank"
                           rel="noreferrer"
                           className="inline-flex text-brand hover:text-ember"

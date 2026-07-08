@@ -1,6 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import type Stripe from "npm:stripe@17";
-import { json, stripe } from "../_shared/stripe.ts";
+import { json, planFromPrice, stripe } from "../_shared/stripe.ts";
 
 const admin = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -29,7 +29,10 @@ async function syncSubscription(sub: Stripe.Subscription) {
     restaurant_id: restaurantId,
     stripe_customer_id: customerId,
     stripe_subscription_id: sub.id,
-    plan_id: sub.metadata?.plan_id ?? item?.price.lookup_key?.split("_")[0] ?? null,
+    plan_id:
+      (sub.metadata?.plan_id as string | undefined) ??
+      planFromPrice(item?.price) ??
+      null,
     price_id: item?.price.id ?? null,
     status: sub.status,
     current_period_end: sub.current_period_end

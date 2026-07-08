@@ -1,5 +1,11 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { PRICES, corsHeaders, json, stripe } from "../_shared/stripe.ts";
+import {
+  SAAS_APP,
+  corsHeaders,
+  json,
+  resolvePriceId,
+  stripe,
+} from "../_shared/stripe.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -26,8 +32,7 @@ Deno.serve(async (req) => {
     if (!restaurant) return json({ error: "No restaurant for this account" }, 400);
 
     const { plan, interval, origin } = await req.json();
-    const price = PRICES[plan]?.[interval];
-    if (!price) return json({ error: "Unknown plan or interval" }, 400);
+    const price = await resolvePriceId(plan, interval);
 
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -48,7 +53,10 @@ Deno.serve(async (req) => {
       const customer = await stripe.customers.create({
         email: user.email ?? undefined,
         name: restaurant.name,
-        metadata: { restaurant_id: restaurant.id },
+        metadata: {
+          restaurant_id: restaurant.id,
+          saas: SAAS_APP,
+        },
       });
       customerId = customer.id;
       await admin.from("subscriptions").upsert({
@@ -66,7 +74,16 @@ Deno.serve(async (req) => {
       cancel_url: `${origin}/app/billing?canceled=1`,
       allow_promotion_codes: true,
       subscription_data: {
-        metadata: { restaurant_id: restaurant.id, plan_id: plan },
+        metadata: {
+          restaurant_id: restaurant.id,
+          plan_id: plan,
+          saas: SAAS_APP,
+        },
+      },
+      metadata: {
+        restaurant_id: restaurant.id,
+        plan_id: plan,
+        saas: SAAS_APP,
       },
     });
 

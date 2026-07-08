@@ -5,24 +5,83 @@ export const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
   httpClient: Stripe.createFetchHttpClient(),
 });
 
-/** plan + interval → Stripe price. Server-side allowlist; never trust client price IDs.
- *  Create matching $15 / $30 / $99 products in Stripe and paste new price IDs here. */
-export const PRICES: Record<string, Record<string, string>> = {
-  starter: {
-    monthly: "price_1TpxtAEIKu2buCASGf6RCPtc",
-    yearly: "price_1TpxtBEIKu2buCASgWkPF8O8",
-  },
-  growth: {
-    monthly: "price_1TpxtBEIKu2buCASVYv9KBNN",
-    yearly: "price_1TpxtBEIKu2buCASJrhciqPy",
-  },
-  pro: {
-    monthly: "price_1TpxtCEIKu2buCAS9joy0Vq9",
-    yearly: "price_1TpxtCEIKu2buCASLdGHKFOq",
-  },
+/** Shared Khidmah platform product — SyncMenu prices live under this product. */
+export const STRIPE_PRODUCT_ID =
+  Deno.env.get("STRIPE_PRODUCT_ID") ?? "prod_UqPvU72LORrOEE";
+
+/** Identifies this SaaS on shared Stripe customers/subscriptions. */
+export const SAAS_APP = Deno.env.get("STRIPE_SAAS_APP") ?? "syncmenu";
+
+/** Stripe price nicknames (must match Dashboard → Product → Pricing). */
+export const PRICE_NICKNAMES: Record<string, Record<string, string>> = {
+  starter: { monthly: "Starter", yearly: "Starter Yearly" },
+  growth: { monthly: "Growth", yearly: "Growth Yearly" },
+  pro: { monthly: "Pro", yearly: "Pro Yearly" },
 };
 
-export const PORTAL_CONFIGURATION = "bpc_1TpxuREIKu2buCAS7L0N4Sx6";
+/** Optional — set if you created a portal configuration in the shared account. */
+export const PORTAL_CONFIGURATION =
+  Deno.env.get("STRIPE_PORTAL_CONFIGURATION") ?? undefined;
+
+let priceCache: Map<string, string> | null = null;
+let priceCacheAt = 0;
+const PRICE_CACHE_MS = 5 * 60 * 1000;
+
+async function loadPriceNicknames(): Promise<Map<string, string>> {
+  if (priceCache && Date.now() - priceCacheAt < PRICE_CACHE_MS) {
+    return priceCache;
+  }
+  const prices = await stripe.prices.list({
+    product: STRIPE_PRODUCT_ID,
+    active: true,
+    limit: 100,
+  });
+  const map = new Map<string, string>();
+  for (const p of prices.data) {
+    if (p.nickname) map.set(p.nickname, p.id);
+  }
+  priceCache = map;
+  priceCacheAt = Date.now();
+  return map;
+}
+
+/** Resolve a plan + interval to a Stripe price ID via product nicknames. */
+export async function resolvePriceId(
+  plan: string,
+  interval: string
+): Promise<string> {
+  const nickname = PRICE_NICKNAMES[plan]?.[interval];
+  if (!nickname) {
+    throw new Error(`Unknown plan or interval: ${plan}/${interval}`);
+  }
+  const cache = await loadPriceNicknames();
+  const id = cache.get(nickname);
+  if (!id) {
+    throw new Error(
+      `Stripe price "${nickname}" not found on product ${STRIPE_PRODUCT_ID}. ` +
+        "Check nicknames in the Khidmah product pricing table."
+    );
+  }
+  return id;
+}
+
+/** Map a Stripe price nickname back to our plan_id. */
+export function planFromNickname(nickname: string | null | undefined): string | null {
+  if (!nickname) return null;
+  const n = nickname.toLowerCase();
+  if (n.includes("starter")) return "starter";
+  if (n.includes("growth")) return "growth";
+  if (n.includes("pro")) return "pro";
+  return null;
+}
+
+export function planFromPrice(price: Stripe.Price | undefined): string | null {
+  if (!price) return null;
+  return (
+    planFromNickname(price.nickname) ??
+    (price.lookup_key ? planFromNickname(price.lookup_key) : null)
+  );
+}
 
 export const corsHeaders = {
   "Access-Control-Allow-Origin": "*",

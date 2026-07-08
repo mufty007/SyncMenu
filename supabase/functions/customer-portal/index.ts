@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
 
     const session = await stripe.billingPortal.sessions.create({
       customer: sub.stripe_customer_id,
-      configuration: PORTAL_CONFIGURATION,
+      ...(PORTAL_CONFIGURATION ? { configuration: PORTAL_CONFIGURATION } : {}),
       return_url: `${origin}/app/billing`,
     });
 

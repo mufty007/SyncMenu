@@ -8,6 +8,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
+import { stripeCustomerUrl } from "../../lib/stripeLinks";
 import { StatusBadge } from "./ui";
 
 interface TenantDetail {
@@ -82,7 +83,7 @@ export default function TenantDetailPage() {
 
   const suspended = tenant.status === "suspended";
   const stripeUrl = tenant.subscription?.stripe_customer_id
-    ? `https://dashboard.stripe.com/test/customers/${tenant.subscription.stripe_customer_id}`
+    ? stripeCustomerUrl(tenant.subscription.stripe_customer_id)
     : null;
 
   const rows: [string, React.ReactNode][] = [
