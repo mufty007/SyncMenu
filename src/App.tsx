@@ -37,6 +37,7 @@ const TenantsPage = lazy(() => import("./pages/platform/TenantsPage"));
 const TenantDetailPage = lazy(() => import("./pages/platform/TenantDetailPage"));
 const PlatformBillingPage = lazy(() => import("./pages/platform/PlatformBillingPage"));
 const EmailsPage = lazy(() => import("./pages/platform/EmailsPage"));
+const PlatformSettingsPage = lazy(() => import("./pages/platform/PlatformSettingsPage"));
 const AdminsPage = lazy(() => import("./pages/platform/AdminsPage"));
 const AuditPage = lazy(() => import("./pages/platform/AuditPage"));
 const UnsubscribePage = lazy(() => import("./pages/UnsubscribePage"));
@@ -179,6 +180,7 @@ export default function App() {
         <Route path="tenants/:id" element={<TenantDetailPage />} />
         <Route path="billing" element={<PlatformBillingPage />} />
         <Route path="emails" element={<EmailsPage />} />
+        <Route path="settings" element={<PlatformSettingsPage />} />
         <Route path="admins" element={<AdminsPage />} />
         <Route path="audit" element={<AuditPage />} />
       </Route>

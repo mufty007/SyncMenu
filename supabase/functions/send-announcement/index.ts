@@ -1,6 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders, json } from "../_shared/stripe.ts";
-import { sendEmail, unsubscribeFooter } from "../_shared/email.ts";
+import { loadEmailConfig, sendEmail, unsubscribeFooter } from "../_shared/email.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -14,7 +14,9 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_ANON_KEY")!,
       { global: { headers: { Authorization: authHeader } } }
     );
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) return json({ error: "Not signed in" }, 401);
 
     const { data: isAdmin } = await supabase.rpc("is_platform_admin");
@@ -22,6 +24,9 @@ Deno.serve(async (req) => {
 
     const { campaignId, origin } = await req.json();
     if (!campaignId) return json({ error: "campaignId required" }, 400);
+
+    const config = await loadEmailConfig();
+    if (!config) return json({ error: "Email not configured — complete Setup first." }, 400);
 
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -44,8 +49,7 @@ Deno.serve(async (req) => {
     });
     const list = (recipients ?? []) as { user_id: string; email: string }[];
 
-    const siteOrigin = origin ?? Deno.env.get("SITE_ORIGIN") ?? "https://syncmenu.vercel.app";
-    const secret = Deno.env.get("UNSUBSCRIBE_SECRET") ?? Deno.env.get("SMTP2GO_API_KEY") ?? "syncmenu";
+    const siteOrigin = origin ?? config.siteOrigin;
     let sent = 0;
 
     const batchSize = 50;
@@ -54,12 +58,15 @@ Deno.serve(async (req) => {
       await Promise.all(
         batch.map(async (r) => {
           try {
-            const footer = unsubscribeFooter(siteOrigin, r.user_id, secret);
-            await sendEmail({
-              to: r.email,
-              subject: campaign.subject,
-              html: campaign.body_html + footer,
-            });
+            const footer = unsubscribeFooter(siteOrigin, r.user_id, config.unsubscribeSecret);
+            await sendEmail(
+              {
+                to: r.email,
+                subject: campaign.subject,
+                html: campaign.body_html + footer,
+              },
+              config
+            );
             sent++;
           } catch (e) {
             console.error(`Failed to send to ${r.email}`, e);
@@ -68,12 +75,15 @@ Deno.serve(async (req) => {
       );
     }
 
-    await admin.from("email_campaigns").update({
-      status: "sent",
-      sent_at: new Date().toISOString(),
-      recipient_count: sent,
-      sent_by: user.id,
-    }).eq("id", campaignId);
+    await admin
+      .from("email_campaigns")
+      .update({
+        status: "sent",
+        sent_at: new Date().toISOString(),
+        recipient_count: sent,
+        sent_by: user.id,
+      })
+      .eq("id", campaignId);
 
     await admin.from("admin_audit_log").insert({
       admin_id: user.id,

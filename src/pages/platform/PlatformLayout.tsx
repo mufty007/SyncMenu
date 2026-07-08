@@ -6,6 +6,7 @@ import {
   LogOut,
   Mail,
   ScrollText,
+  Settings,
   Shield,
   Users,
 } from "lucide-react";
@@ -18,6 +19,7 @@ const NAV = [
   { to: "/platform/tenants", label: "Tenants", icon: Building2 },
   { to: "/platform/billing", label: "Billing", icon: CreditCard },
   { to: "/platform/emails", label: "Emails", icon: Mail },
+  { to: "/platform/settings", label: "Settings", icon: Settings },
   { to: "/platform/admins", label: "Admins", icon: Shield },
   { to: "/platform/audit", label: "Audit log", icon: ScrollText },
 ];

@@ -17,7 +17,8 @@ import MenuBoard from "../templates/MenuBoard";
 import Reveal from "../components/Reveal";
 import { SiteFooter, SiteHeader } from "../components/SiteChrome";
 import { planCheckoutPath, type BillingInterval } from "../lib/billingParams";
-import { PLANS, type TemplateId } from "../lib/types";
+import { usePlatformSettings } from "../lib/usePlatformSettings";
+import type { TemplateId } from "../lib/types";
 
 /* ------------------------------------------------------------------ */
 /* Content                                                             */
@@ -188,6 +189,7 @@ export default function Landing() {
   const [wingsPrice, setWingsPrice] = useState(5.9);
   const [pulse, setPulse] = useState(false);
   const [billingInterval, setBillingInterval] = useState<BillingInterval>("monthly");
+  const { plans } = usePlatformSettings();
   const sections = useMemo(() => demoSections(wingsPrice), [wingsPrice]);
 
   function changePrice() {
@@ -442,7 +444,7 @@ export default function Landing() {
             className="mt-8"
           />
           <div className="mt-10 grid items-start gap-6 md:grid-cols-3">
-            {PLANS.map((plan, i) => {
+            {plans.map((plan, i) => {
               const price =
                 billingInterval === "yearly" ? plan.annualMonthly : plan.monthly;
               return (

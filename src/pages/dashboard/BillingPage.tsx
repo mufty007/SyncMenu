@@ -10,10 +10,12 @@ import {
 } from "../../lib/billingParams";
 import { useAuth } from "../../context/AuthContext";
 import { trialDaysLeft } from "../../lib/format";
-import { PLANS, type Subscription } from "../../lib/types";
+import { usePlatformSettings } from "../../lib/usePlatformSettings";
+import type { Subscription } from "../../lib/types";
 
 export default function BillingPage() {
   const { restaurant } = useAuth();
+  const { plans } = usePlatformSettings();
   const [params, setParams] = useSearchParams();
   const [sub, setSub] = useState<Subscription | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -153,7 +155,7 @@ export default function BillingPage() {
       {error && <p className="mt-4 text-sm text-alert">{error}</p>}
 
       <div className="mt-6 grid items-start gap-5 lg:grid-cols-3">
-        {PLANS.map((plan) => {
+        {plans.map((plan) => {
           const isCurrent = active && sub?.plan_id === plan.id;
           const price = interval === "yearly" ? plan.annualMonthly : plan.monthly;
           return (

@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   CalendarPlus,
   ExternalLink,
+  Save,
   ShieldBan,
   ShieldCheck,
 } from "lucide-react";
@@ -15,6 +16,7 @@ interface TenantDetail {
   id: string;
   name: string;
   status: string;
+  currency: string;
   suspended_at: string | null;
   suspended_reason: string | null;
   trial_ends_at: string;
@@ -22,13 +24,19 @@ interface TenantDetail {
   owner_email: string;
   screen_count: number;
   menu_count: number;
+  screen_limit_override: number | null;
+  menu_limit_override: number | null;
+  effective_limits: { screens: number; menus: number };
   subscription: {
     plan_id: string | null;
     status: string | null;
     stripe_customer_id: string | null;
+    stripe_subscription_id: string | null;
     current_period_end: string | null;
   } | null;
 }
+
+const PLANS = ["starter", "growth", "pro"] as const;
 
 export default function TenantDetailPage() {
   const { id } = useParams();
@@ -36,10 +44,26 @@ export default function TenantDetailPage() {
   const [busy, setBusy] = useState(false);
   const [days, setDays] = useState(14);
   const [reason, setReason] = useState("");
+  const [name, setName] = useState("");
+  const [currency, setCurrency] = useState("USD");
+  const [trialEnd, setTrialEnd] = useState("");
+  const [screenOverride, setScreenOverride] = useState("");
+  const [menuOverride, setMenuOverride] = useState("");
+  const [compPlan, setCompPlan] = useState("growth");
+  const [message, setMessage] = useState<string | null>(null);
 
   async function load() {
     const { data } = await supabase.rpc("admin_get_tenant", { p_id: id });
-    setTenant(data as TenantDetail);
+    const t = data as TenantDetail;
+    setTenant(t);
+    if (t) {
+      setName(t.name);
+      setCurrency(t.currency);
+      setTrialEnd(t.trial_ends_at.slice(0, 10));
+      setScreenOverride(t.screen_limit_override?.toString() ?? "");
+      setMenuOverride(t.menu_limit_override?.toString() ?? "");
+      setCompPlan(t.subscription?.plan_id ?? "growth");
+    }
   }
 
   useEffect(() => {
@@ -70,6 +94,55 @@ export default function TenantDetailPage() {
     void load();
   }
 
+  async function saveTenant() {
+    if (!tenant) return;
+    setBusy(true);
+    setMessage(null);
+    const { error } = await supabase.rpc("admin_update_tenant", {
+      p_id: tenant.id,
+      p_name: name,
+      p_currency: currency,
+      p_trial_ends_at: trialEnd ? new Date(trialEnd).toISOString() : null,
+      p_screen_limit_override: screenOverride ? Number(screenOverride) : null,
+      p_menu_limit_override: menuOverride ? Number(menuOverride) : null,
+      p_clear_limit_overrides: !screenOverride && !menuOverride,
+    });
+    setBusy(false);
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+    setMessage("Tenant updated.");
+    void load();
+  }
+
+  async function applyCompPlan() {
+    if (!tenant) return;
+    setBusy(true);
+    const { error } = await supabase.rpc("admin_set_tenant_plan", {
+      p_restaurant_id: tenant.id,
+      p_plan_id: compPlan,
+      p_status: "active",
+    });
+    setBusy(false);
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+    setMessage(`Plan set to ${compPlan} (comp / manual).`);
+    void load();
+  }
+
+  async function clearSubscription() {
+    if (!tenant || !confirm("Clear subscription record? Stripe billing is unchanged.")) return;
+    setBusy(true);
+    await supabase.rpc("admin_clear_tenant_subscription", {
+      p_restaurant_id: tenant.id,
+    });
+    setBusy(false);
+    void load();
+  }
+
   if (!tenant) {
     return (
       <div>
@@ -91,7 +164,10 @@ export default function TenantDetailPage() {
     ["Owner", tenant.owner_email],
     ["Signed up", new Date(tenant.created_at).toLocaleDateString()],
     ["Trial ends", new Date(tenant.trial_ends_at).toLocaleDateString()],
-    ["Screens / menus", `${tenant.screen_count} / ${tenant.menu_count}`],
+    [
+      "Screens / menus",
+      `${tenant.screen_count} / ${tenant.menu_count} (limit ${tenant.effective_limits.screens} / ${tenant.effective_limits.menus})`,
+    ],
     [
       "Subscription",
       <span className="inline-flex items-center gap-2">
@@ -113,6 +189,10 @@ export default function TenantDetailPage() {
         <h1 className="text-2xl font-semibold">{tenant.name}</h1>
         <StatusBadge status={tenant.status} />
       </div>
+
+      {message && (
+        <div className="mt-4 rounded-xl border border-live/30 bg-live/10 p-3 text-sm">{message}</div>
+      )}
 
       {suspended && (
         <div className="mt-4 rounded-xl border border-alert/30 bg-alert/5 p-4 text-sm">
@@ -149,9 +229,81 @@ export default function TenantDetailPage() {
         </div>
 
         <div className="card p-6">
-          <h2 className="font-semibold">Actions</h2>
+          <h2 className="font-semibold">Edit tenant</h2>
+          <div className="mt-4 space-y-3">
+            <div>
+              <label className="label">Restaurant name</label>
+              <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
+            </div>
+            <div>
+              <label className="label">Currency</label>
+              <input className="input w-28" value={currency} onChange={(e) => setCurrency(e.target.value)} />
+            </div>
+            <div>
+              <label className="label">Trial end date</label>
+              <input
+                type="date"
+                className="input"
+                value={trialEnd}
+                onChange={(e) => setTrialEnd(e.target.value)}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="label">Screen limit override</label>
+                <input
+                  type="number"
+                  min={1}
+                  className="input"
+                  placeholder="Default"
+                  value={screenOverride}
+                  onChange={(e) => setScreenOverride(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="label">Menu limit override</label>
+                <input
+                  type="number"
+                  min={1}
+                  className="input"
+                  placeholder="Default"
+                  value={menuOverride}
+                  onChange={(e) => setMenuOverride(e.target.value)}
+                />
+              </div>
+            </div>
+            <button className="btn-primary" disabled={busy} onClick={() => void saveTenant()}>
+              <Save size={16} /> Save tenant
+            </button>
+          </div>
 
-          <div className="mt-4">
+          <div className="mt-6 border-t border-mist pt-6">
+            <label className="label">Comp / manual plan</label>
+            <div className="flex flex-wrap gap-2">
+              <select
+                className="input max-w-[10rem]"
+                value={compPlan}
+                onChange={(e) => setCompPlan(e.target.value)}
+              >
+                {PLANS.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+              <button className="btn-secondary" disabled={busy} onClick={() => void applyCompPlan()}>
+                Set plan
+              </button>
+              <button className="btn-ghost text-smoke" disabled={busy} onClick={() => void clearSubscription()}>
+                Clear sub record
+              </button>
+            </div>
+            <p className="mt-1 text-xs text-smoke">
+              Bypasses Stripe for comps. Does not charge or cancel in Stripe.
+            </p>
+          </div>
+
+          <div className="mt-6 border-t border-mist pt-6">
             <label className="label">Extend trial</label>
             <div className="flex gap-2">
               <input

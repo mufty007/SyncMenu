@@ -1,6 +1,10 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders, json } from "../_shared/stripe.ts";
-import { parseUnsubscribeToken, verifyUnsubscribeToken } from "../_shared/email.ts";
+import {
+  loadEmailConfig,
+  parseUnsubscribeToken,
+  verifyUnsubscribeToken,
+} from "../_shared/email.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -14,7 +18,8 @@ Deno.serve(async (req) => {
     const parsed = parseUnsubscribeToken(token);
     if (!parsed) return json({ error: "Invalid token" }, 400);
 
-    const secret = Deno.env.get("UNSUBSCRIBE_SECRET") ?? Deno.env.get("SMTP2GO_API_KEY") ?? "syncmenu";
+    const config = await loadEmailConfig();
+    const secret = config?.unsubscribeSecret ?? Deno.env.get("UNSUBSCRIBE_SECRET") ?? "syncmenu";
     if (!verifyUnsubscribeToken(parsed.userId, parsed.sig, secret)) {
       return json({ error: "Invalid token" }, 400);
     }

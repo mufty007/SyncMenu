@@ -1,209 +1,71 @@
-import { useEffect, useState } from "react";
-import { Download, Mail, Send } from "lucide-react";
-import { supabase } from "../../lib/supabase";
-import { EmptyState, PageHeader, StatusBadge } from "./ui";
+import { useState } from "react";
+import { PageHeader } from "./ui";
+import ComposeTab from "./emails/ComposeTab";
+import HistoryTab from "./emails/HistoryTab";
+import RecipientsTab from "./emails/RecipientsTab";
+import SetupTab from "./emails/SetupTab";
+import type { EmailTab } from "./emails/types";
 
-interface Campaign {
-  id: string;
-  subject: string;
-  audience: string;
-  status: string;
-  sent_at: string | null;
-  recipient_count: number | null;
-  created_at: string;
-}
-
-const AUDIENCES = [
-  { id: "all", label: "All opted-in owners" },
-  { id: "active", label: "Active (trial or subscribed)" },
-  { id: "trial", label: "On trial only" },
-  { id: "subscribed", label: "Paying subscribers" },
-  { id: "churned", label: "Churned (trial ended, no sub)" },
+const TABS: { id: EmailTab; label: string }[] = [
+  { id: "recipients", label: "Recipients" },
+  { id: "compose", label: "Compose" },
+  { id: "setup", label: "Setup" },
+  { id: "history", label: "History" },
 ];
 
 export default function EmailsPage() {
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [subject, setSubject] = useState("");
-  const [bodyHtml, setBodyHtml] = useState("");
-  const [audience, setAudience] = useState("all");
+  const [tab, setTab] = useState<EmailTab>("recipients");
   const [draftId, setDraftId] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [historyKey, setHistoryKey] = useState(0);
 
-  async function loadCampaigns() {
-    const { data } = await supabase.rpc("admin_list_campaigns");
-    setCampaigns((data as Campaign[]) ?? []);
-  }
-
-  useEffect(() => {
-    void loadCampaigns();
-  }, []);
-
-  async function saveDraft() {
-    setBusy(true);
-    setMessage(null);
-    const { data, error } = await supabase.rpc("admin_save_campaign", {
-      p_id: draftId,
-      p_subject: subject,
-      p_body_html: bodyHtml,
-      p_audience: audience,
-    });
-    setBusy(false);
-    if (error) {
-      setMessage(error.message);
-      return;
-    }
-    setDraftId(data as string);
-    setMessage("Draft saved.");
-    void loadCampaigns();
-  }
-
-  async function sendCampaign() {
-    if (!confirm("Send this announcement to the selected audience?")) return;
-    setBusy(true);
-    setMessage(null);
-
-    let id = draftId;
-    if (!id) {
-      const { data, error } = await supabase.rpc("admin_save_campaign", {
-        p_id: null,
-        p_subject: subject,
-        p_body_html: bodyHtml,
-        p_audience: audience,
-      });
-      if (error) {
-        setBusy(false);
-        setMessage(error.message);
-        return;
-      }
-      id = data as string;
-      setDraftId(id);
-    }
-
-    const { data, error } = await supabase.functions.invoke("send-announcement", {
-      body: { campaignId: id, origin: window.location.origin },
-    });
-    setBusy(false);
-    if (error) {
-      setMessage(error.message);
-      return;
-    }
-    setMessage(`Sent to ${(data as { sent: number }).sent} recipients.`);
-    setSubject("");
-    setBodyHtml("");
-    setDraftId(null);
-    void loadCampaigns();
-  }
-
-  async function exportEmails() {
-    const { data } = await supabase.rpc("admin_export_emails");
-    const rows = (data as { email: string; restaurant_name: string }[]) ?? [];
-    const csv = ["email,restaurant", ...rows.map((r) => `"${r.email}","${r.restaurant_name}"`)].join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "syncmenu-emails.csv";
-    a.click();
-    URL.revokeObjectURL(url);
+  function editDraft(id: string) {
+    setDraftId(id);
+    setTab("compose");
   }
 
   return (
     <div>
       <PageHeader
         title="Emails"
-        subtitle="Welcome emails are automatic. Compose platform announcements here."
-        actions={
-          <button className="btn-secondary" onClick={() => void exportEmails()}>
-            <Download size={16} /> Export email list
-          </button>
-        }
+        subtitle="Manage recipients, SMTP delivery, announcements, and campaign history."
       />
 
-      <div className="card mt-8 p-6">
-        <h2 className="font-semibold">Compose announcement</h2>
-        <div className="mt-4 space-y-4">
-          <div>
-            <label className="label">Audience</label>
-            <select className="input" value={audience} onChange={(e) => setAudience(e.target.value)}>
-              {AUDIENCES.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="label">Subject</label>
-            <input className="input" value={subject} onChange={(e) => setSubject(e.target.value)} />
-          </div>
-          <div>
-            <label className="label">Body (HTML)</label>
-            <textarea
-              className="input min-h-[160px] font-mono text-sm"
-              value={bodyHtml}
-              onChange={(e) => setBodyHtml(e.target.value)}
-              placeholder="<p>We've shipped a new feature…</p>"
-            />
-          </div>
-          {message && <p className="text-sm text-smoke">{message}</p>}
-          <div className="flex gap-2">
-            <button className="btn-secondary" disabled={busy} onClick={() => void saveDraft()}>
-              Save draft
-            </button>
+      <div className="mt-8 border-b border-mist">
+        <nav className="-mb-px flex gap-1 overflow-x-auto">
+          {TABS.map((t) => (
             <button
-              className="btn-primary"
-              disabled={busy || !subject || !bodyHtml}
-              onClick={() => void sendCampaign()}
+              key={t.id}
+              type="button"
+              onClick={() => setTab(t.id)}
+              className={`shrink-0 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+                tab === t.id
+                  ? "border-brand text-brand"
+                  : "border-transparent text-smoke hover:border-mist hover:text-ink"
+              }`}
             >
-              <Send size={16} /> Send now
+              {t.label}
             </button>
-          </div>
-        </div>
+          ))}
+        </nav>
       </div>
 
-      <div className="card mt-8 overflow-hidden">
-        <h2 className="border-b border-mist px-4 py-3 font-semibold">Campaign history</h2>
-        <div className="table-scroll">
-        <table className="w-full min-w-[560px] text-left text-sm">
-          <thead className="border-b border-mist bg-cloud/50 text-smoke">
-            <tr>
-              <th className="px-4 py-3 font-medium">Subject</th>
-              <th className="px-4 py-3 font-medium">Audience</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-              <th className="px-4 py-3 font-medium">Recipients</th>
-              <th className="px-4 py-3 font-medium">Sent</th>
-            </tr>
-          </thead>
-          <tbody>
-            {campaigns.length === 0 ? (
-              <tr>
-                <td colSpan={5}>
-                  <EmptyState
-                    icon={Mail}
-                    title="No announcements yet"
-                    hint="Compose one above to reach your owners."
-                  />
-                </td>
-              </tr>
-            ) : (
-              campaigns.map((c) => (
-                <tr key={c.id} className="border-b border-mist last:border-0 hover:bg-cloud/40">
-                  <td className="px-4 py-3 font-medium">{c.subject}</td>
-                  <td className="px-4 py-3 capitalize">{c.audience}</td>
-                  <td className="px-4 py-3">
-                    <StatusBadge status={c.status} />
-                  </td>
-                  <td className="px-4 py-3 tabular-nums">{c.recipient_count ?? "—"}</td>
-                  <td className="px-4 py-3 text-smoke">
-                    {c.sent_at ? new Date(c.sent_at).toLocaleString() : "—"}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-        </div>
+      <div className="mt-6">
+        {tab === "recipients" && <RecipientsTab />}
+        {tab === "compose" && (
+          <ComposeTab
+            draftId={draftId}
+            onDraftSaved={setDraftId}
+            onSent={() => {
+              setDraftId(null);
+              setHistoryKey((k) => k + 1);
+              setTab("history");
+            }}
+          />
+        )}
+        {tab === "setup" && <SetupTab />}
+        {tab === "history" && (
+          <HistoryTab refreshKey={historyKey} onEditDraft={editDraft} />
+        )}
       </div>
     </div>
   );

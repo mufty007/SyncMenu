@@ -1,6 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders, json } from "../_shared/stripe.ts";
-import { sendEmail, welcomeEmailHtml } from "../_shared/email.ts";
+import { loadEmailConfig, sendEmail, welcomeEmailHtml } from "../_shared/email.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -11,12 +11,19 @@ Deno.serve(async (req) => {
     const { email, userId, origin } = await req.json();
     if (!email) return json({ error: "email required" }, 400);
 
-    const siteOrigin = origin ?? Deno.env.get("SITE_ORIGIN") ?? "https://syncmenu.vercel.app";
-    await sendEmail({
-      to: email,
-      subject: "Welcome to SyncMenu — let's get your menu live",
-      html: welcomeEmailHtml(siteOrigin),
-    });
+    const config = await loadEmailConfig();
+    if (!config) return json({ error: "Email not configured" }, 500);
+    if (!config.welcomeEnabled) return json({ ok: true, skipped: true });
+
+    const siteOrigin = origin ?? config.siteOrigin;
+    await sendEmail(
+      {
+        to: email,
+        subject: config.welcomeSubject,
+        html: welcomeEmailHtml(siteOrigin, config),
+      },
+      config
+    );
 
     if (userId) {
       const admin = createClient(
