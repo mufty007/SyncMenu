@@ -1,5 +1,3 @@
-import { supabase } from "../../lib/supabase";
-
 const SMTP2GO_URL = "https://api.smtp2go.com/v3/email/send";
 
 export interface SendEmailOptions {
