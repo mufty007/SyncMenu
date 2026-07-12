@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import {
   CreditCard,
+  Film,
   Globe,
   HelpCircle,
   LayoutGrid,
@@ -26,6 +27,7 @@ const NAV = [
   { to: "/app/menus", label: "Menus", icon: LayoutGrid },
   { to: "/app/screens", label: "Screens", icon: MonitorPlay },
   { to: "/app/playlists", label: "Playlists", icon: ListVideo },
+  { to: "/app/media", label: "Media", icon: Film },
   { to: "/app/public", label: "Public page", icon: Globe },
   { to: "/app/settings", label: "Settings", icon: Settings },
   { to: "/app/billing", label: "Billing", icon: CreditCard },

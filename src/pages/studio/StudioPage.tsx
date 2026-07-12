@@ -5,12 +5,14 @@ import {
   BringToFront,
   Check,
   Copy,
+  Film,
   Heading1,
   ImagePlus,
   LayoutList,
   Loader2,
   Minus,
   Plus,
+  QrCode,
   SendToBack,
   Square,
   Store,
@@ -29,11 +31,13 @@ import {
   type StudioElement,
   type StudioFont,
   type TemplateConfig,
+  type TemplateId,
 } from "../../lib/types";
 import { boardDimensions } from "../../templates/shared";
-import { StudioElementView, scaffoldStudio } from "../../templates/StudioBoard";
+import { StudioElementView, scaffoldFromTemplate, scaffoldStudio } from "../../templates/StudioBoard";
 import Toggle from "../../components/Toggle";
 import { deleteMenuImageUrl, uploadMenuImage } from "../../lib/uploadImage";
+import { uploadMenuMedia } from "../../lib/uploadMedia";
 
 type SectionWithItems = MenuSection & { items: MenuItem[] };
 
@@ -43,6 +47,14 @@ const FONT_OPTIONS: [StudioFont, string][] = [
   ["bebas", "Bebas Neue"],
   ["fraunces", "Fraunces"],
   ["caveat", "Caveat"],
+  ["bricolage", "Bricolage Grotesque"],
+  ["outfit", "Outfit"],
+];
+
+const TEMPLATE_STARTERS: { id: TemplateId; label: string }[] = [
+  { id: "spotlight", label: "Spotlight" },
+  { id: "vivid", label: "Vivid Zones" },
+  { id: "promo", label: "Promo Hero" },
 ];
 
 export default function StudioPage() {
@@ -64,6 +76,8 @@ export default function StudioPage() {
   const cfgRef = useRef<TemplateConfig | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const imgFileRef = useRef<HTMLInputElement>(null);
+  const mediaFileRef = useRef<HTMLInputElement>(null);
+  const videoFileRef = useRef<HTMLInputElement>(null);
   const bgFileRef = useRef<HTMLInputElement>(null);
   docRef.current = doc;
   cfgRef.current = config;
@@ -312,6 +326,56 @@ export default function StudioPage() {
         <aside className="w-60 shrink-0 space-y-5 overflow-y-auto border-r border-white/10 bg-[#1A2026] p-4 text-white">
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-white/40">
+              Template starters
+            </p>
+            <div className="space-y-1.5">
+              {TEMPLATE_STARTERS.map((t) => (
+                <button
+                  key={t.id}
+                  className="w-full rounded-lg border border-white/10 px-3 py-2 text-left text-sm text-white/80 transition-colors hover:border-brand hover:text-white"
+                  onClick={() => {
+                    if (!confirm(`Replace canvas with the ${t.label} starter layout?`)) return;
+                    const next = scaffoldFromTemplate(t.id, menu!.orientation, sections, config!.accent);
+                    setDoc(next);
+                    void supabase
+                      .from("menus")
+                      .update({ template_config: { ...config, studio: next } })
+                      .eq("id", menu!.id);
+                  }}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-white/40">
+              Layers
+            </p>
+            <div className="max-h-40 space-y-1 overflow-y-auto">
+              {[...doc.elements].reverse().map((el, revIdx) => {
+                const idx = doc.elements.length - 1 - revIdx;
+                return (
+                  <button
+                    key={el.id}
+                    onClick={() => setSelectedId(el.id)}
+                    className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition-colors ${
+                      el.id === selectedId
+                        ? "bg-brand/20 text-white"
+                        : "text-white/60 hover:bg-white/10 hover:text-white"
+                    }`}
+                  >
+                    <span className="w-4 text-white/30">{idx + 1}</span>
+                    <span className="truncate">{labelFor(el.type)}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-white/40">
               Elements
             </p>
             <div className="grid grid-cols-2 gap-2">
@@ -334,6 +398,23 @@ export default function StudioPage() {
                 }
               />
               <StudioAddButton icon={ImagePlus} label="Photo" onClick={() => imgFileRef.current?.click()} />
+              <StudioAddButton icon={Film} label="GIF" onClick={() => mediaFileRef.current?.click()} />
+              <StudioAddButton icon={Film} label="Video" onClick={() => videoFileRef.current?.click()} />
+              <StudioAddButton
+                icon={QrCode}
+                label="QR code"
+                onClick={() =>
+                  addElement({
+                    type: "qrCode",
+                    linkUrl: "",
+                    x: width - 200,
+                    y: height - 200,
+                    w: 160,
+                    h: 160,
+                    radius: 12,
+                  })
+                }
+              />
               <StudioAddButton
                 icon={Store}
                 label="Logo"
@@ -381,6 +462,60 @@ export default function StudioPage() {
                     radius: 16,
                     opacity: 100,
                   });
+                }
+              }}
+            />
+            <input
+              ref={mediaFileRef}
+              type="file"
+              accept="image/gif"
+              className="hidden"
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (!f || !restaurant) return;
+                try {
+                  const uploaded = await uploadMenuMedia(restaurant.id, f);
+                  addElement({
+                    type: "gif",
+                    url: uploaded.url,
+                    x: width / 2 - 240,
+                    y: height / 2 - 160,
+                    w: 480,
+                    h: 320,
+                    radius: 16,
+                    opacity: 100,
+                  });
+                } catch (err) {
+                  alert(err instanceof Error ? err.message : "Upload failed");
+                }
+              }}
+            />
+            <input
+              ref={videoFileRef}
+              type="file"
+              accept="video/mp4,video/webm"
+              className="hidden"
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (!f || !restaurant) return;
+                try {
+                  const uploaded = await uploadMenuMedia(restaurant.id, f);
+                  addElement({
+                    type: "video",
+                    url: uploaded.url,
+                    loop: true,
+                    muted: true,
+                    x: 0,
+                    y: 0,
+                    w: width,
+                    h: height,
+                    radius: 0,
+                    opacity: 100,
+                  });
+                } catch (err) {
+                  alert(err instanceof Error ? err.message : "Upload failed");
                 }
               }}
             />
@@ -724,6 +859,31 @@ export default function StudioPage() {
                 </>
               )}
 
+              {(selected.type === "gif" || selected.type === "video") && (
+                <>
+                  <RangeField label="Corner radius" min={0} max={200} value={selected.radius ?? 12} onChange={(v) => updateEl(selected.id, { radius: v })} />
+                  <RangeField label="Opacity" min={5} max={100} value={selected.opacity ?? 100} onChange={(v) => updateEl(selected.id, { opacity: v })} suffix="%" />
+                  {selected.type === "video" && (
+                    <>
+                      <Toggle dark label="Loop" checked={selected.loop !== false} onChange={(v) => updateEl(selected.id, { loop: v })} />
+                      <Toggle dark label="Muted" checked={selected.muted !== false} onChange={(v) => updateEl(selected.id, { muted: v })} />
+                    </>
+                  )}
+                </>
+              )}
+
+              {selected.type === "qrCode" && (
+                <label className="block text-xs font-medium text-white/60">
+                  Link URL
+                  <input
+                    className="mt-1 w-full rounded-lg border border-white/15 bg-transparent px-2 py-1.5 text-sm text-white outline-none focus:border-brand"
+                    placeholder="https://your-order-link.com"
+                    value={selected.linkUrl ?? ""}
+                    onChange={(e) => updateEl(selected.id, { linkUrl: e.target.value })}
+                  />
+                </label>
+              )}
+
               {selected.type === "section" && (
                 <>
                   <label className="block text-xs font-medium text-white/60">
@@ -936,6 +1096,12 @@ function labelFor(type: StudioElement["type"]) {
       return "Shop name";
     case "section":
       return "Menu section";
+    case "gif":
+      return "GIF";
+    case "video":
+      return "Video";
+    case "qrCode":
+      return "QR code";
   }
 }
 

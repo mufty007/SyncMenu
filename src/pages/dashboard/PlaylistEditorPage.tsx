@@ -1,17 +1,21 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowDown, ArrowLeft, ArrowUp, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, Film, Plus, Trash2 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
-import type { Menu, Playlist, PlaylistSlide, Transition } from "../../lib/types";
+import type { MediaAsset, Menu, Playlist, PlaylistSlide, Transition } from "../../lib/types";
+
+type SlideRow = PlaylistSlide & { media?: MediaAsset | null };
 
 export default function PlaylistEditorPage() {
   const { playlistId } = useParams();
   const navigate = useNavigate();
   const [playlist, setPlaylist] = useState<Playlist | null>(null);
-  const [slides, setSlides] = useState<PlaylistSlide[]>([]);
+  const [slides, setSlides] = useState<SlideRow[]>([]);
   const [menus, setMenus] = useState<Menu[]>([]);
+  const [mediaAssets, setMediaAssets] = useState<MediaAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const [addMenuId, setAddMenuId] = useState("");
+  const [addMediaId, setAddMediaId] = useState("");
 
   useEffect(() => {
     if (!playlistId) return;
@@ -23,20 +27,19 @@ export default function PlaylistEditorPage() {
         .maybeSingle();
       setPlaylist((p as Playlist) ?? null);
       if (p) {
-        const [{ data: s }, { data: m }] = await Promise.all([
+        const rid = (p as Playlist).restaurant_id;
+        const [{ data: s }, { data: m }, { data: media }] = await Promise.all([
           supabase
             .from("playlist_slides")
-            .select("*")
+            .select("*, media:media_assets(*)")
             .eq("playlist_id", playlistId)
             .order("sort_order"),
-          supabase
-            .from("menus")
-            .select("*")
-            .eq("restaurant_id", (p as Playlist).restaurant_id)
-            .order("name"),
+          supabase.from("menus").select("*").eq("restaurant_id", rid).order("name"),
+          supabase.from("media_assets").select("*").eq("restaurant_id", rid).order("name"),
         ]);
-        setSlides((s as PlaylistSlide[]) ?? []);
+        setSlides((s as SlideRow[]) ?? []);
         setMenus((m as Menu[]) ?? []);
+        setMediaAssets((media as MediaAsset[]) ?? []);
       }
       setLoading(false);
     })();
@@ -54,7 +57,20 @@ export default function PlaylistEditorPage() {
     );
   }
 
-  const menuName = (id: string) => menus.find((m) => m.id === id)?.name ?? "Deleted menu";
+  const menuName = (id: string | null) => menus.find((m) => m.id === id)?.name ?? "Deleted menu";
+  const mediaName = (id: string | null) => mediaAssets.find((m) => m.id === id)?.name ?? "Deleted media";
+
+  function slideLabel(slide: SlideRow) {
+    if (slide.slide_type === "media") {
+      return (
+        <span className="flex items-center gap-2">
+          <Film size={15} className="text-brand" />
+          {slide.media?.name ?? mediaName(slide.media_id)}
+        </span>
+      );
+    }
+    return menuName(slide.menu_id);
+  }
 
   async function rename(name: string) {
     setPlaylist((p) => (p ? { ...p, name } : p));
@@ -67,16 +83,38 @@ export default function PlaylistEditorPage() {
     navigate("/app/playlists");
   }
 
-  async function addSlide() {
+  async function addMenuSlide() {
     if (!addMenuId) return;
     const sort = slides.length ? Math.max(...slides.map((s) => s.sort_order)) + 1 : 0;
     const { data } = await supabase
       .from("playlist_slides")
-      .insert({ playlist_id: playlist!.id, menu_id: addMenuId, sort_order: sort })
-      .select()
+      .insert({
+        playlist_id: playlist!.id,
+        slide_type: "menu",
+        menu_id: addMenuId,
+        sort_order: sort,
+      })
+      .select("*, media:media_assets(*)")
       .single();
-    if (data) setSlides((s) => [...s, data as PlaylistSlide]);
+    if (data) setSlides((s) => [...s, data as SlideRow]);
     setAddMenuId("");
+  }
+
+  async function addMediaSlide() {
+    if (!addMediaId) return;
+    const sort = slides.length ? Math.max(...slides.map((s) => s.sort_order)) + 1 : 0;
+    const { data } = await supabase
+      .from("playlist_slides")
+      .insert({
+        playlist_id: playlist!.id,
+        slide_type: "media",
+        media_id: addMediaId,
+        sort_order: sort,
+      })
+      .select("*, media:media_assets(*)")
+      .single();
+    if (data) setSlides((s) => [...s, data as SlideRow]);
+    setAddMediaId("");
   }
 
   async function patchSlide(id: string, patch: Partial<PlaylistSlide>) {
@@ -123,26 +161,60 @@ export default function PlaylistEditorPage() {
         </button>
       </div>
 
-      <div className="card mt-6 p-5">
+      <div className="card mt-6 space-y-4 p-5">
         <div className="flex gap-2">
           <select
             className="input flex-1"
             value={addMenuId}
             onChange={(e) => setAddMenuId(e.target.value)}
           >
-            <option value="">Choose a menu to add as a slide…</option>
+            <option value="">Add a menu slide…</option>
             {menus.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.name}
               </option>
             ))}
           </select>
-          <button className="btn-primary shrink-0" onClick={() => void addSlide()} disabled={!addMenuId}>
-            <Plus size={16} /> Add slide
+          <button
+            className="btn-primary shrink-0"
+            onClick={() => void addMenuSlide()}
+            disabled={!addMenuId}
+          >
+            <Plus size={16} /> Menu
           </button>
         </div>
+        <div className="flex gap-2">
+          <select
+            className="input flex-1"
+            value={addMediaId}
+            onChange={(e) => setAddMediaId(e.target.value)}
+          >
+            <option value="">Add a media promo slide…</option>
+            {mediaAssets.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name} ({m.kind})
+              </option>
+            ))}
+          </select>
+          <button
+            className="btn-secondary shrink-0"
+            onClick={() => void addMediaSlide()}
+            disabled={!addMediaId}
+          >
+            <Plus size={16} /> Media
+          </button>
+        </div>
+        {mediaAssets.length === 0 && (
+          <p className="text-sm text-smoke">
+            Upload GIFs and videos in the{" "}
+            <Link to="/app/media" className="font-medium text-brand">
+              Media library
+            </Link>
+            .
+          </p>
+        )}
         {menus.length === 0 && (
-          <p className="mt-3 text-sm text-smoke">
+          <p className="text-sm text-smoke">
             You need at least one menu first —{" "}
             <Link to="/app/menus" className="font-medium text-brand">
               create one here
@@ -158,9 +230,14 @@ export default function PlaylistEditorPage() {
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand/10 text-sm font-semibold text-brand">
               {i + 1}
             </span>
-            <span className="min-w-0 flex-1 truncate font-medium">
-              {menuName(slide.menu_id)}
-            </span>
+            <span className="min-w-0 flex-1 truncate font-medium">{slideLabel(slide)}</span>
+            {slide.slide_type === "media" && slide.media?.thumbnail_url && (
+              <img
+                src={slide.media.thumbnail_url}
+                alt=""
+                className="h-10 w-16 rounded object-cover"
+              />
+            )}
             <label className="flex items-center gap-2 text-sm text-smoke">
               Shows for
               <input

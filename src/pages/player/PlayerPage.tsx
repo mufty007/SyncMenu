@@ -4,10 +4,13 @@ import { QRCodeSVG } from "qrcode.react";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import type { ScreenContent } from "../../lib/types";
 import MenuBoard, { boardDimensions } from "../../templates/MenuBoard";
+import MediaSlide from "../../templates/MediaSlide";
 import Logo, { SyncIcon } from "../../components/Logo";
 import {
   collectScreenImageUrls,
+  collectScreenVideoUrls,
   preloadImages,
+  preloadVideos,
   warmImageCache,
 } from "../../lib/imageCache";
 
@@ -299,8 +302,10 @@ function ContentView({
     }
     setOffline(false);
     const urls = collectScreenImageUrls(next);
+    const videoUrls = collectScreenVideoUrls(next);
     void warmImageCache(urls);
     await preloadImages(urls);
+    void preloadVideos(videoUrls);
     const prev = contentRef.current;
     const changed = prev && JSON.stringify(prev.slides) !== JSON.stringify(next.slides);
     setContent(next);
@@ -405,14 +410,18 @@ function ContentView({
     );
   }
 
-  const orientation = slide.menu.orientation;
+  const orientation =
+    content.screen?.orientation ??
+    (slide.slide_type === "menu" ? slide.menu.orientation : "landscape");
   const { width, height } = boardDimensions(orientation);
   const scale = Math.min(viewport.w / width, viewport.h / height);
+  const isMedia = slide.slide_type === "media";
+  const slideKey = isMedia ? slide.media.id : slide.menu.id;
 
   return (
     <div className="fixed inset-0 flex cursor-none items-center justify-center overflow-hidden bg-black">
       <div
-        key={slide.menu.id}
+        key={slideKey}
         className={slide.transition === "slide-up" ? "anim-slide-up" : "anim-fade"}
         style={{
           width,
@@ -422,19 +431,23 @@ function ContentView({
           flexShrink: 0,
         }}
       >
-        <MenuBoard
-          data={{
-            restaurantName: content.restaurant?.name ?? "",
-            logoUrl: content.restaurant?.logo_url,
-            currency: content.restaurant?.currency ?? "USD",
-            menuName: slide.menu.name,
-            sections: slide.menu.sections,
-          }}
-          templateId={slide.menu.template_id}
-          config={slide.menu.template_config}
-          orientation={orientation}
-          priority
-        />
+        {isMedia ? (
+          <MediaSlide media={slide.media} orientation={orientation} priority />
+        ) : (
+          <MenuBoard
+            data={{
+              restaurantName: content.restaurant?.name ?? "",
+              logoUrl: content.restaurant?.logo_url,
+              currency: content.restaurant?.currency ?? "USD",
+              menuName: slide.menu.name,
+              sections: slide.menu.sections,
+            }}
+            templateId={slide.menu.template_id}
+            config={slide.menu.template_config}
+            orientation={orientation}
+            priority
+          />
+        )}
       </div>
       {pulse && (
         <div className="sync-pulse pointer-events-none absolute bottom-6 right-6 h-3 w-3 rounded-full bg-brand" />

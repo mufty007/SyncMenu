@@ -7,6 +7,9 @@ import BoldBoard from "./BoldBoard";
 import ChalkBoard from "./ChalkBoard";
 import LuxeBoard from "./LuxeBoard";
 import MarketBoard from "./MarketBoard";
+import SpotlightBoard from "./SpotlightBoard";
+import VividBoard from "./VividBoard";
+import PromoBoard from "./PromoBoard";
 import CustomBoard from "./CustomBoard";
 import StudioBoard from "./StudioBoard";
 
@@ -49,6 +52,24 @@ export const TEMPLATES: {
     defaultAccent: "#22B573",
   },
   {
+    id: "spotlight",
+    name: "Spotlight",
+    blurb: "Hero product panel + catalog grid — promo meets menu",
+    defaultAccent: "#1E3A5F",
+  },
+  {
+    id: "vivid",
+    name: "Vivid Zones",
+    blurb: "Color-blocked category zones — fast-food energy",
+    defaultAccent: "#E5484D",
+  },
+  {
+    id: "promo",
+    name: "Promo Hero",
+    blurb: "Full-screen product spotlight with quick-list strip",
+    defaultAccent: "#3B82F6",
+  },
+  {
     id: "custom",
     name: "Your Design",
     blurb: "Build your own — layout, fonts & every color",
@@ -62,6 +83,9 @@ const BOARDS: Record<TemplateId, (p: InnerProps) => JSX.Element> = {
   chalk: ChalkBoard,
   luxe: LuxeBoard,
   market: MarketBoard,
+  spotlight: SpotlightBoard,
+  vivid: VividBoard,
+  promo: PromoBoard,
   custom: CustomBoard,
 };
 

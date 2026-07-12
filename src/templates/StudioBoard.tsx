@@ -1,5 +1,6 @@
-import type { Orientation, StudioDoc, StudioElement } from "../lib/types";
+import type { Orientation, StudioDoc, StudioElement, TemplateId } from "../lib/types";
 import { formatPrice } from "../lib/format";
+import { QRCodeSVG } from "qrcode.react";
 import {
   FONTS,
   FONT_FAMILY,
@@ -93,6 +94,90 @@ export function StudioElementView({
           }}
         >
           {editing ? "No image" : ""}
+        </div>
+      );
+    case "gif":
+      return el.url ? (
+        <img
+          src={el.url}
+          alt=""
+          draggable={false}
+          style={{
+            ...base,
+            objectFit: "cover",
+            borderRadius: el.radius ?? 12,
+            opacity: (el.opacity ?? 100) / 100,
+            display: "block",
+          }}
+        />
+      ) : (
+        <div style={{ ...base, background: "#E4E7EB", borderRadius: el.radius ?? 12 }} />
+      );
+    case "video":
+      return el.url ? (
+        <video
+          autoPlay
+          loop={el.loop !== false}
+          muted={el.muted !== false}
+          playsInline
+          src={el.url}
+          style={{
+            ...base,
+            objectFit: "cover",
+            borderRadius: el.radius ?? 12,
+            opacity: (el.opacity ?? 100) / 100,
+            display: "block",
+          }}
+        />
+      ) : (
+        <div
+          style={{
+            ...base,
+            borderRadius: el.radius ?? 12,
+            background: "#1A2026",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#9AA5B1",
+            fontSize: 18,
+            fontFamily: FONTS.body,
+          }}
+        >
+          {editing ? "No video" : ""}
+        </div>
+      );
+    case "qrCode":
+      return el.linkUrl ? (
+        <div
+          style={{
+            ...base,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "#FFFFFF",
+            borderRadius: el.radius ?? 12,
+            padding: 8,
+          }}
+        >
+          <QRCodeSVG value={el.linkUrl} width="90%" height="90%" />
+        </div>
+      ) : (
+        <div
+          style={{
+            ...base,
+            border: editing ? "2px dashed #9AA5B1" : "none",
+            borderRadius: el.radius ?? 12,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#9AA5B1",
+            fontSize: 16,
+            fontFamily: FONTS.body,
+            textAlign: "center",
+            padding: 8,
+          }}
+        >
+          {editing ? "Set link URL" : ""}
         </div>
       );
     case "logo":
@@ -336,4 +421,112 @@ export function scaffoldStudio(
   });
 
   return { elements };
+}
+
+/** Starter layouts based on premium templates. */
+export function scaffoldFromTemplate(
+  templateId: TemplateId,
+  orientation: Orientation,
+  sections: BoardData["sections"],
+  accent: string
+): StudioDoc {
+  const { width, height } = boardDimensions(orientation);
+  const uid = () => crypto.randomUUID();
+  const portrait = orientation === "portrait";
+
+  if (templateId === "spotlight") {
+    const heroW = portrait ? width : Math.round(width * 0.38);
+    const catalogX = portrait ? 0 : heroW;
+    const catalogY = portrait ? Math.round(height * 0.5) : 0;
+    const catalogW = portrait ? width : width - heroW;
+    return {
+      elements: [
+        { id: uid(), type: "shape", x: 0, y: 0, w: heroW, h: portrait ? catalogY : height, fill: accent, radius: 0, opacity: 100 },
+        { id: uid(), type: "menuName", x: catalogX + 48, y: catalogY + 40, w: catalogW - 96, h: 80, fontSize: 48, fontWeight: 700, fontFamily: "bricolage", color: "#1F2933", align: "left" },
+        ...sections.slice(0, 2).map((section, i) => ({
+          id: uid(),
+          type: "section" as const,
+          sectionId: section.id,
+          x: catalogX + 48,
+          y: catalogY + 140 + i * 280,
+          w: catalogW - 96,
+          h: 260,
+          itemFontSize: 24,
+          titleColor: accent,
+          textColor: "#1F2933",
+          mutedColor: "#52606D",
+          priceColor: accent,
+          showTitle: true,
+          showDesc: true,
+          showPrice: true,
+          fontFamily: "poppins" as const,
+        })),
+      ],
+    };
+  }
+
+  if (templateId === "vivid") {
+    const cols = portrait ? 1 : 2;
+    const rows = portrait ? 4 : 2;
+    const gap = 12;
+    const pad = 32;
+    const cellW = (width - pad * 2 - gap * (cols - 1)) / cols;
+    const cellH = (height - pad * 2 - gap * (rows - 1) - 80) / rows;
+    return {
+      elements: [
+        { id: uid(), type: "menuName", x: pad, y: 24, w: width - pad * 2, h: 56, fontSize: 52, fontWeight: 700, fontFamily: "bebas", color: "#1F2933", align: "left" },
+        ...sections.slice(0, 4).map((section, i) => {
+          const col = portrait ? 0 : i % cols;
+          const row = portrait ? i : Math.floor(i / cols);
+          return {
+            id: uid(),
+            type: "section" as const,
+            sectionId: section.id,
+            x: pad + col * (cellW + gap),
+            y: 96 + row * (cellH + gap),
+            w: cellW,
+            h: cellH,
+            itemFontSize: 20,
+            titleColor: "#FFFFFF",
+            textColor: "#FFFFFF",
+            mutedColor: "rgba(255,255,255,0.75)",
+            priceColor: "#FFFFFF",
+            showTitle: true,
+            showDesc: false,
+            showPrice: true,
+            fontFamily: "poppins" as const,
+          };
+        }),
+      ],
+    };
+  }
+
+  if (templateId === "promo") {
+    return {
+      elements: [
+        { id: uid(), type: "shape", x: 0, y: 0, w: width, h: height, fill: accent, radius: 0, opacity: 100 },
+        { id: uid(), type: "menuName", x: 80, y: height - 200, w: width - 160, h: 100, fontSize: 72, fontWeight: 700, fontFamily: "bricolage", color: "#FFFFFF", align: "center" },
+        ...sections.slice(0, 1).map((section) => ({
+          id: uid(),
+          type: "section" as const,
+          sectionId: section.id,
+          x: portrait ? 40 : width - 420,
+          y: portrait ? height - 380 : 80,
+          w: portrait ? width - 80 : 360,
+          h: portrait ? 160 : height - 160,
+          itemFontSize: 22,
+          titleColor: "#FFFFFF",
+          textColor: "#FFFFFF",
+          mutedColor: "rgba(255,255,255,0.8)",
+          priceColor: "#FFFFFF",
+          showTitle: true,
+          showDesc: false,
+          showPrice: true,
+          fontFamily: "poppins" as const,
+        })),
+      ],
+    };
+  }
+
+  return scaffoldStudio(orientation, sections, accent);
 }

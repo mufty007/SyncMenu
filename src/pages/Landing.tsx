@@ -225,8 +225,14 @@ function demoSections(wingsPrice: number) {
 
 const SHOWCASE: { id: TemplateId; label: string; accent: string }[] = [
   { id: "classic", label: "Classic", accent: "#FF6B2C" },
+  { id: "bold", label: "Bold Board", accent: "#FF6B2C" },
   { id: "chalk", label: "Chalkboard", accent: "#FFB020" },
   { id: "luxe", label: "Night Luxe", accent: "#D4AF7A" },
+  { id: "market", label: "Fresh Market", accent: "#22B573" },
+  { id: "spotlight", label: "Spotlight", accent: "#1E3A5F" },
+  { id: "vivid", label: "Vivid Zones", accent: "#E5484D" },
+  { id: "promo", label: "Promo Hero", accent: "#3B82F6" },
+  { id: "custom", label: "Your Design", accent: "#FF6B2C" },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -468,14 +474,14 @@ export default function Landing() {
         <div className="mx-auto max-w-6xl px-6">
           <Reveal>
             <h2 className="font-display text-center text-3xl font-bold text-white md:text-4xl">
-              Six looks. Or design your own.
+              Nine looks. Or design your own.
             </h2>
             <p className="mx-auto mt-3 max-w-lg text-center text-white/60">
               Real templates from the product, rendered with a real menu. Your
               logo, your colors, your photos — without touching a design tool.
             </p>
           </Reveal>
-          <div className="mt-12 grid gap-6 md:grid-cols-3">
+          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {SHOWCASE.map((t, i) => (
               <Reveal key={t.id} delay={i * 120}>
                 <div className="lift overflow-hidden rounded-2xl border-4 border-white/10 shadow-xl">

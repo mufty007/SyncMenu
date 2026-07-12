@@ -1,5 +1,14 @@
 export type Orientation = "landscape" | "portrait";
-export type TemplateId = "classic" | "bold" | "chalk" | "luxe" | "market" | "custom";
+export type TemplateId =
+  | "classic"
+  | "bold"
+  | "chalk"
+  | "luxe"
+  | "market"
+  | "spotlight"
+  | "vivid"
+  | "promo"
+  | "custom";
 
 export type HeadingFont =
   | "auto"
@@ -7,7 +16,11 @@ export type HeadingFont =
   | "grotesk"
   | "bebas"
   | "fraunces"
-  | "caveat";
+  | "caveat"
+  | "bricolage"
+  | "outfit";
+
+export type LayoutRatio = "40-60" | "50-50" | "33-67";
 
 /** Structured options for the "Your Design" template studio. */
 export interface CustomDesign {
@@ -30,7 +43,7 @@ export interface CustomDesign {
 /* Studio: freeform drag-and-drop canvas design                        */
 /* ------------------------------------------------------------------ */
 
-export type StudioFont = "poppins" | "grotesk" | "bebas" | "fraunces" | "caveat";
+export type StudioFont = "poppins" | "grotesk" | "bebas" | "fraunces" | "caveat" | "bricolage" | "outfit";
 
 export type StudioElementType =
   | "text"
@@ -39,7 +52,10 @@ export type StudioElementType =
   | "logo"
   | "menuName"
   | "restaurantName"
-  | "section";
+  | "section"
+  | "video"
+  | "gif"
+  | "qrCode";
 
 export interface StudioElement {
   id: string;
@@ -71,6 +87,10 @@ export interface StudioElement {
   textColor?: string;
   mutedColor?: string;
   priceColor?: string;
+  /* video / gif / qr */
+  linkUrl?: string;
+  loop?: boolean;
+  muted?: boolean;
 }
 
 /** A studio design: elements painted in array order (first = back). */
@@ -125,6 +145,16 @@ export interface TemplateConfig {
   custom?: CustomDesign;
   /** Freeform canvas design; when present it wins over `custom`. */
   studio?: StudioDoc;
+  /** Spotlight / Promo: section that feeds the hero panel. */
+  heroSectionId?: string | null;
+  /** Spotlight / Promo: specific item for hero (overrides section pick). */
+  heroItemId?: string | null;
+  /** Vivid: per-section accent color overrides (by section index). */
+  zoneColors?: string[];
+  /** Spotlight split ratio. */
+  layoutRatio?: LayoutRatio;
+  /** Optional looping background video URL (promo template). */
+  backgroundVideo?: string | null;
 }
 
 export const DEFAULT_TEMPLATE_CONFIG: TemplateConfig = {
@@ -144,6 +174,11 @@ export const DEFAULT_TEMPLATE_CONFIG: TemplateConfig = {
   backgroundImage: null,
   backgroundOverlay: 40,
   headingFont: "auto",
+  heroSectionId: null,
+  heroItemId: null,
+  zoneColors: [],
+  layoutRatio: "40-60",
+  backgroundVideo: null,
 };
 
 export interface RestaurantLinks {
@@ -263,10 +298,40 @@ export interface Playlist {
 export interface PlaylistSlide {
   id: string;
   playlist_id: string;
-  menu_id: string;
+  slide_type: SlideType;
+  menu_id: string | null;
+  media_id: string | null;
   duration_seconds: number;
   transition: Transition;
   sort_order: number;
+}
+
+export type SlideType = "menu" | "media";
+export type MediaKind = "image" | "gif" | "video";
+
+export interface MediaAsset {
+  id: string;
+  restaurant_id: string;
+  name: string;
+  kind: MediaKind;
+  url: string;
+  mime_type: string;
+  file_size_bytes: number;
+  duration_seconds: number | null;
+  thumbnail_url: string | null;
+  link_url: string | null;
+  show_qr: boolean;
+  created_at: string;
+}
+
+export interface MediaSlidePayload {
+  id: string;
+  name: string;
+  kind: MediaKind;
+  url: string;
+  thumbnail_url: string | null;
+  link_url: string | null;
+  show_qr: boolean;
 }
 
 /** Shape returned by the get_screen_content RPC for the kiosk player. */
@@ -282,7 +347,8 @@ export interface ScreenContent {
   slides?: SlidePayload[];
 }
 
-export interface SlidePayload {
+export interface MenuSlidePayload {
+  slide_type: "menu";
   duration_seconds: number;
   transition: Transition;
   menu: {
@@ -295,6 +361,15 @@ export interface SlidePayload {
   };
 }
 
+export interface MediaSlideContent {
+  slide_type: "media";
+  duration_seconds: number;
+  transition: Transition;
+  media: MediaSlidePayload;
+}
+
+export type SlidePayload = MenuSlidePayload | MediaSlideContent;
+
 export const PLAN_LIMITS = {
   screens: 5,
   menus: 10,
@@ -303,11 +378,11 @@ export const PLAN_LIMITS = {
 };
 
 /** Per-plan limits — keep in sync with SQL in migration 0007. */
-export const PLAN_LIMITS_BY_PLAN: Record<string, { screens: number; menus: number }> = {
-  starter: { screens: 1, menus: 5 },
-  growth: { screens: 5, menus: 10 },
-  pro: { screens: 10, menus: 999 },
-  trial: { screens: 5, menus: 10 },
+export const PLAN_LIMITS_BY_PLAN: Record<string, { screens: number; menus: number; storageMb: number }> = {
+  starter: { screens: 1, menus: 5, storageMb: 50 },
+  growth: { screens: 5, menus: 10, storageMb: 100 },
+  pro: { screens: 10, menus: 999, storageMb: 500 },
+  trial: { screens: 5, menus: 10, storageMb: 100 },
 };
 
 export interface Subscription {

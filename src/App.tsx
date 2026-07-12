@@ -21,6 +21,7 @@ const MenuEditorPage = lazy(() => import("./pages/dashboard/MenuEditorPage"));
 const ScreensPage = lazy(() => import("./pages/dashboard/ScreensPage"));
 const PlaylistsPage = lazy(() => import("./pages/dashboard/PlaylistsPage"));
 const PlaylistEditorPage = lazy(() => import("./pages/dashboard/PlaylistEditorPage"));
+const MediaLibraryPage = lazy(() => import("./pages/dashboard/MediaLibraryPage"));
 const SettingsPage = lazy(() => import("./pages/dashboard/SettingsPage"));
 const OwnerIntegrationsPage = lazy(() => import("./pages/dashboard/IntegrationsPage"));
 const BillingPage = lazy(() => import("./pages/dashboard/BillingPage"));
@@ -155,6 +156,7 @@ export default function App() {
         <Route path="screens" element={<ScreensPage />} />
         <Route path="playlists" element={<PlaylistsPage />} />
         <Route path="playlists/:playlistId" element={<PlaylistEditorPage />} />
+        <Route path="media" element={<MediaLibraryPage />} />
         <Route path="public" element={<PublicPagePage />} />
         <Route path="setup-tv" element={<TvSetupPage />} />
         <Route path="settings" element={<SettingsPage />} />

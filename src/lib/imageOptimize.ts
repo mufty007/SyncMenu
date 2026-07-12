@@ -11,6 +11,13 @@ export async function optimizeImageForUpload(file: File): Promise<File> {
     throw new Error("Please choose an image file.");
   }
 
+  if (file.type === "image/gif") {
+    if (file.size > 15 * 1024 * 1024) {
+      throw new Error("GIF is too large. Please choose a file under 15 MB.");
+    }
+    return file;
+  }
+
   const bitmap = await createImageBitmap(file);
   const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
   const width = Math.max(1, Math.round(bitmap.width * scale));

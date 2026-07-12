@@ -49,7 +49,7 @@ export default function Onboarding() {
   const [currency, setCurrency] = useState("USD");
   const [brandColor, setBrandColor] = useState("#FF6B2C");
   const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [templateId, setTemplateId] = useState<TemplateId>("bold");
+  const [templateId, setTemplateId] = useState<TemplateId>("spotlight");
   const logoRef = useRef<HTMLInputElement>(null);
 
   const logoPreview = useMemo(
@@ -311,7 +311,9 @@ export default function Onboarding() {
                 templates anytime.
               </p>
               <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {TEMPLATES.filter((t) => t.id !== "custom").map((t) => (
+                {TEMPLATES.filter((t) => t.id !== "custom").map((t) => {
+                  const recommended = t.id === "spotlight" || t.id === "vivid";
+                  return (
                   <button
                     key={t.id}
                     type="button"
@@ -338,9 +340,15 @@ export default function Onboarding() {
                       }`}
                     >
                       {t.name}
+                      {recommended && (
+                        <span className="ml-1.5 rounded-full bg-brand/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand">
+                          Recommended
+                        </span>
+                      )}
                     </p>
                   </button>
-                ))}
+                  );
+                })}
               </div>
             </>
           )}

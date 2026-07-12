@@ -150,4 +150,101 @@ await createMenu({
   ],
 });
 
+await createMenu({
+  name: "Spotlight Specials",
+  template_id: "spotlight",
+  template_config: { accent: "#1E3A5F", layoutRatio: "40-60" },
+  orientation: "landscape",
+  sections: [
+    {
+      name: "Chef's Pick",
+      items: [
+        ["Cheese Bomb", "Warm chocolate, cream cheese filling", 8.9],
+      ],
+    },
+    {
+      name: "Mains",
+      items: [
+        ["Classic Burger", "Angus beef, house sauce, pickles", 11.5],
+        ["Crispy Chicken", "Buttermilk fried, slaw", 10.9],
+        ["Veggie Bowl", "Roasted veg, tahini, quinoa", 9.5],
+      ],
+    },
+    {
+      name: "Sides",
+      items: [
+        ["Truffle Fries", "Parmesan, truffle oil", 4.5],
+        ["Onion Rings", "Beer-battered, chipotle mayo", 3.9],
+      ],
+    },
+  ],
+});
+
+await createMenu({
+  name: "Combo Board",
+  template_id: "vivid",
+  template_config: {
+    accent: "#E5484D",
+    zoneColors: ["#E5484D", "#3B82F6", "#14B8A6", "#F59E0B"],
+  },
+  orientation: "landscape",
+  sections: [
+    {
+      name: "Combos",
+      items: [
+        ["#1 Sandwich Combo", "Sandwich, fries, drink", 9.99],
+        ["#2 Chicken Combo", "8pc chicken, 2 sides", 14.99],
+        ["#3 Tenders", "6 tenders, fries, drink", 11.99],
+      ],
+    },
+    {
+      name: "Sides",
+      items: [
+        ["Mac & Cheese", "Creamy three-cheese", 3.49],
+        ["Coleslaw", "House-made", 2.49],
+        ["Biscuit", "Buttery, flaky", 1.99],
+      ],
+    },
+    {
+      name: "Drinks",
+      items: [
+        ["Soft Drink", "Coke, Sprite, Fanta", 1.99],
+        ["Lemonade", "Fresh-squeezed", 2.49],
+        ["Iced Tea", "Sweet or unsweet", 1.99],
+      ],
+    },
+    {
+      name: "Sweets",
+      items: [
+        ["Apple Pie", "Warm, cinnamon", 2.99],
+        ["Chocolate Chip Cookie", "Fresh-baked", 1.49],
+      ],
+    },
+  ],
+});
+
+await createMenu({
+  name: "Promo Spotlight",
+  template_id: "promo",
+  template_config: { accent: "#3B82F6" },
+  orientation: "landscape",
+  sections: [
+    {
+      name: "Featured",
+      items: [
+        ["Shrimp Tackle Box", "Crispy shrimp, fries, coleslaw & drink", 8.99],
+        ["Ghost Pepper Wings", "Limited time — extra hot", 5.89],
+      ],
+    },
+    {
+      name: "Also try",
+      items: [
+        ["Fish Sandwich", "Beer-battered cod", 7.99],
+        ["Chicken Biscuit", "Breakfast favorite", 4.99],
+        ["Family Bucket", "12pc, 3 sides", 24.99],
+      ],
+    },
+  ],
+});
+
 console.log("Done.");

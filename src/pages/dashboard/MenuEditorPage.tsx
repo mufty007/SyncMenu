@@ -34,6 +34,7 @@ import { TAG_ICONS } from "../../templates/shared";
 import ScaledFrame from "../../components/ScaledFrame";
 import Toggle from "../../components/Toggle";
 import { deleteMenuImageUrl, uploadMenuImage } from "../../lib/uploadImage";
+import { uploadMenuMedia } from "../../lib/uploadMedia";
 
 type DraftItem = MenuItem & { _pending?: boolean };
 type SectionWithItems = MenuSection & { items: DraftItem[]; _pending?: boolean };
@@ -56,6 +57,7 @@ export default function MenuEditorPage() {
   const [showQr, setShowQr] = useState(false);
   const [isDeliveryMenu, setIsDeliveryMenu] = useState(false);
   const bgFileRef = useRef<HTMLInputElement>(null);
+  const bgVideoFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!menuId) return;
@@ -129,6 +131,15 @@ export default function MenuEditorPage() {
       const publicUrl = await uploadMenuImage(path, file);
       void deleteMenuImageUrl(config.backgroundImage);
       patchConfig({ backgroundImage: publicUrl });
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Upload failed");
+    }
+  }
+
+  async function uploadBackgroundVideo(file: File) {
+    try {
+      const uploaded = await uploadMenuMedia(restaurant!.id, file);
+      patchConfig({ backgroundVideo: uploaded.url });
     } catch (err) {
       alert(err instanceof Error ? err.message : "Upload failed");
     }
@@ -637,8 +648,91 @@ export default function MenuEditorPage() {
                 <option value="bebas">Bebas Neue — condensed</option>
                 <option value="fraunces">Fraunces — serif</option>
                 <option value="caveat">Caveat — handwritten</option>
+                <option value="bricolage">Bricolage Grotesque — editorial</option>
+                <option value="outfit">Outfit — modern rounded</option>
               </select>
             </div>
+
+            {(menu.template_id === "spotlight" || menu.template_id === "promo") && (
+              <>
+                <div>
+                  <p className="label">Hero section</p>
+                  <select
+                    className="input"
+                    value={config.heroSectionId ?? ""}
+                    onChange={(e) =>
+                      patchConfig({ heroSectionId: e.target.value || null })
+                    }
+                  >
+                    <option value="">Auto (first featured item)</option>
+                    {sections.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <p className="label">Hero item</p>
+                  <select
+                    className="input"
+                    value={config.heroItemId ?? ""}
+                    onChange={(e) =>
+                      patchConfig({ heroItemId: e.target.value || null })
+                    }
+                  >
+                    <option value="">Auto from section</option>
+                    {sections.flatMap((s) =>
+                      s.items.map((i) => (
+                        <option key={i.id} value={i.id}>
+                          {s.name}: {i.name}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+              </>
+            )}
+
+            {menu.template_id === "spotlight" && (
+              <Choice
+                label="Split ratio"
+                value={config.layoutRatio ?? "40-60"}
+                options={[
+                  ["40-60", "40 / 60"],
+                  ["50-50", "50 / 50"],
+                  ["33-67", "33 / 67"],
+                ]}
+                onChange={(v) => patchConfig({ layoutRatio: v as TemplateConfig["layoutRatio"] })}
+              />
+            )}
+
+            {menu.template_id === "vivid" && sections.length > 0 && (
+              <div>
+                <p className="label">Zone colors</p>
+                <p className="mb-2 text-xs text-smoke">
+                  One accent per section zone (up to 4).
+                </p>
+                <div className="space-y-2">
+                  {sections.slice(0, 4).map((s, idx) => (
+                    <div key={s.id} className="flex items-center gap-2">
+                      <span className="w-24 truncate text-xs text-smoke">{s.name}</span>
+                      <input
+                        type="color"
+                        value={config.zoneColors?.[idx] ?? ["#E5484D", "#3B82F6", "#14B8A6", "#F59E0B"][idx]}
+                        onChange={(e) => {
+                          const colors = [...(config.zoneColors ?? [])];
+                          colors[idx] = e.target.value;
+                          patchConfig({ zoneColors: colors });
+                        }}
+                        className="h-8 w-8 cursor-pointer rounded-lg border border-mist p-0.5"
+                        aria-label={`Zone color for ${s.name}`}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div>
               <p className="label">Background</p>
@@ -701,6 +795,38 @@ export default function MenuEditorPage() {
                 }}
               />
             </div>
+
+            {menu.template_id === "promo" && (
+              <div>
+                <p className="label">Hero background video</p>
+                <p className="mb-2 text-xs text-smoke">Optional looping MP4 behind the promo (max 30s).</p>
+                <button
+                  className="btn-secondary w-full py-1.5 text-xs"
+                  onClick={() => bgVideoFileRef.current?.click()}
+                >
+                  <ImagePlus size={14} /> {config.backgroundVideo ? "Change video" : "Upload video"}
+                </button>
+                {config.backgroundVideo && (
+                  <button
+                    className="btn-ghost mt-2 w-full py-1.5 text-xs text-alert hover:bg-alert/10 hover:text-alert"
+                    onClick={() => patchConfig({ backgroundVideo: null })}
+                  >
+                    Remove video
+                  </button>
+                )}
+                <input
+                  ref={bgVideoFileRef}
+                  type="file"
+                  accept="video/mp4,video/webm"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) void uploadBackgroundVideo(f);
+                    e.target.value = "";
+                  }}
+                />
+              </div>
+            )}
 
             <div>
               <p className="label">Text size</p>

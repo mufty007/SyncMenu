@@ -5,8 +5,6 @@ import type {
   Orientation,
   TemplateConfig,
 } from "../lib/types";
-
-/** Lucide icons for dietary tags (no emoji anywhere in the product). */
 export const TAG_ICONS: Record<string, LucideIcon> = {
   vegetarian: Leaf,
   vegan: Sprout,
@@ -165,6 +163,8 @@ export const FONTS = {
   condensed: '"Bebas Neue", "Space Grotesk", sans-serif',
   serif: '"Fraunces", Georgia, serif',
   chalk: '"Caveat", cursive',
+  bricolage: '"Bricolage Grotesque", "Space Grotesk", sans-serif',
+  outfit: '"Outfit", "Poppins", sans-serif',
 };
 
 export const FONT_FAMILY: Record<string, string> = {
@@ -173,6 +173,8 @@ export const FONT_FAMILY: Record<string, string> = {
   bebas: FONTS.condensed,
   fraunces: FONTS.serif,
   caveat: FONTS.chalk,
+  bricolage: FONTS.bricolage,
+  outfit: FONTS.outfit,
 };
 
 const HEADING_FONT_MAP = FONT_FAMILY;
@@ -192,4 +194,42 @@ export function headingFont(cfg: TemplateConfig, fallback: string) {
 export function boardBg(cfg: TemplateConfig, fallback: string) {
   if (cfg.backgroundImage) return "transparent";
   return cfg.background || fallback;
+}
+
+/** Pick hero item for spotlight/promo templates. */
+export function resolveHeroItem(
+  sections: (MenuSection & { items: MenuItem[] })[],
+  cfg: TemplateConfig
+): MenuItem | null {
+  if (cfg.heroItemId) {
+    for (const s of sections) {
+      const found = s.items.find((i) => i.id === cfg.heroItemId);
+      if (found) return found;
+    }
+  }
+  if (cfg.heroSectionId) {
+    const sec = sections.find((s) => s.id === cfg.heroSectionId);
+    if (sec?.items.length) {
+      return sec.items.find((i) => i.featured) ?? sec.items[0];
+    }
+  }
+  for (const s of sections) {
+    const featured = s.items.find((i) => i.featured);
+    if (featured) return featured;
+  }
+  return sections[0]?.items[0] ?? null;
+}
+
+/** Sections excluding the hero item's section (for catalog side). */
+export function catalogSections(
+  sections: (MenuSection & { items: MenuItem[] })[],
+  heroItem: MenuItem | null
+) {
+  if (!heroItem) return sections;
+  return sections
+    .map((s) => ({
+      ...s,
+      items: s.items.filter((i) => i.id !== heroItem.id),
+    }))
+    .filter((s) => s.items.length > 0);
 }
