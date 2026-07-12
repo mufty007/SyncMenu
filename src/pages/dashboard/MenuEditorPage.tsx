@@ -54,6 +54,7 @@ export default function MenuEditorPage() {
   const [deletedItemIds, setDeletedItemIds] = useState<string[]>([]);
   const [showPreview, setShowPreview] = useState(false);
   const [showQr, setShowQr] = useState(false);
+  const [isDeliveryMenu, setIsDeliveryMenu] = useState(false);
   const bgFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -74,6 +75,14 @@ export default function MenuEditorPage() {
       })));
       setLoading(false);
     })();
+  }, [menuId]);
+
+  useEffect(() => {
+    if (!menuId) return;
+    void supabase.rpc("get_clover_integration").then(({ data }) => {
+      const clover = data as { delivery_menu_id?: string; status?: string } | null;
+      setIsDeliveryMenu(clover?.delivery_menu_id === menuId && clover?.status === "active");
+    });
   }, [menuId]);
 
   useEffect(() => {
@@ -384,6 +393,13 @@ export default function MenuEditorPage() {
       {saveMessage && (
         <div className="mt-3 rounded-xl border border-live/30 bg-live/10 px-4 py-2.5 text-sm">
           {saveMessage}
+        </div>
+      )}
+
+      {isDeliveryMenu && (
+        <div className="mt-3 rounded-xl border border-brand/25 bg-brand/5 px-4 py-2.5 text-sm text-ink">
+          Delivery sync is on — changes to this menu push to Clover (and Uber Eats / DoorDash if
+          connected there) after you save.
         </div>
       )}
 

@@ -2,7 +2,7 @@ import LegalLayout, { LegalSection } from "./LegalLayout";
 
 export default function Privacy() {
   return (
-    <LegalLayout title="Privacy Policy" updated="July 4, 2026">
+    <LegalLayout title="Privacy Policy" updated="July 11, 2026">
       <LegalSection title="1. What this covers">
         <p>
           This policy explains what information SyncMenu ("we", "us") collects
@@ -32,6 +32,12 @@ export default function Privacy() {
           <strong>Billing information.</strong> Payments are processed by
           Stripe. We never see or store your full card details.
         </p>
+        <p>
+          <strong>Clover integration (optional).</strong> If you connect Clover
+          for delivery menu sync, we store OAuth tokens to push your menu to your
+          Clover account. Clover&apos;s own privacy policy governs data they
+          process on their platform.
+        </p>
       </LegalSection>
 
       <LegalSection title="3. How we use it">
@@ -58,7 +64,8 @@ export default function Privacy() {
         <p>
           We rely on a small number of processors to run SyncMenu: Supabase
           (database, authentication, file storage, real-time sync), Stripe
-          (payments), and our hosting provider. Each receives only the data
+          (payments), Clover (optional POS menu sync when you connect your
+          account), and our hosting provider. Each receives only the data
           needed to perform its function.
         </p>
       </LegalSection>

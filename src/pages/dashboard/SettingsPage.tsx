@@ -1,5 +1,6 @@
+import { Link } from "react-router-dom";
 import { useRef, useState, type FormEvent } from "react";
-import { ImagePlus } from "lucide-react";
+import { ImagePlus, Plug } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../context/AuthContext";
 
@@ -147,6 +148,19 @@ export default function SettingsPage() {
           {saved && <span className="text-sm font-medium text-live">Saved!</span>}
         </div>
       </form>
+
+      <Link
+        to="/app/settings/integrations"
+        className="card mt-6 flex items-center gap-4 p-6 transition-colors hover:border-brand/30"
+      >
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand/10 text-brand">
+          <Plug size={20} />
+        </div>
+        <div>
+          <p className="font-medium">Integrations</p>
+          <p className="text-sm text-smoke">Connect Clover to push menu changes to delivery apps.</p>
+        </div>
+      </Link>
     </div>
   );
 }

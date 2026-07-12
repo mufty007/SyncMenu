@@ -22,6 +22,7 @@ const ScreensPage = lazy(() => import("./pages/dashboard/ScreensPage"));
 const PlaylistsPage = lazy(() => import("./pages/dashboard/PlaylistsPage"));
 const PlaylistEditorPage = lazy(() => import("./pages/dashboard/PlaylistEditorPage"));
 const SettingsPage = lazy(() => import("./pages/dashboard/SettingsPage"));
+const OwnerIntegrationsPage = lazy(() => import("./pages/dashboard/IntegrationsPage"));
 const BillingPage = lazy(() => import("./pages/dashboard/BillingPage"));
 const PairConfirmPage = lazy(() => import("./pages/dashboard/PairConfirmPage"));
 const StudioPage = lazy(() => import("./pages/studio/StudioPage"));
@@ -37,6 +38,7 @@ const TenantsPage = lazy(() => import("./pages/platform/TenantsPage"));
 const TenantDetailPage = lazy(() => import("./pages/platform/TenantDetailPage"));
 const PlatformBillingPage = lazy(() => import("./pages/platform/PlatformBillingPage"));
 const EmailsPage = lazy(() => import("./pages/platform/EmailsPage"));
+const PlatformIntegrationsPage = lazy(() => import("./pages/platform/IntegrationsPage"));
 const PlatformSettingsPage = lazy(() => import("./pages/platform/PlatformSettingsPage"));
 const AdminsPage = lazy(() => import("./pages/platform/AdminsPage"));
 const AuditPage = lazy(() => import("./pages/platform/AuditPage"));
@@ -156,6 +158,7 @@ export default function App() {
         <Route path="public" element={<PublicPagePage />} />
         <Route path="setup-tv" element={<TvSetupPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="settings/integrations" element={<OwnerIntegrationsPage />} />
         <Route path="billing" element={<BillingPage />} />
       </Route>
       <Route
@@ -180,6 +183,7 @@ export default function App() {
         <Route path="tenants/:id" element={<TenantDetailPage />} />
         <Route path="billing" element={<PlatformBillingPage />} />
         <Route path="emails" element={<EmailsPage />} />
+        <Route path="integrations" element={<PlatformIntegrationsPage />} />
         <Route path="settings" element={<PlatformSettingsPage />} />
         <Route path="admins" element={<AdminsPage />} />
         <Route path="audit" element={<AuditPage />} />

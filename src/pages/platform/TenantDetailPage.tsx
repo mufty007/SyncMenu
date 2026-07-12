@@ -51,11 +51,22 @@ export default function TenantDetailPage() {
   const [menuOverride, setMenuOverride] = useState("");
   const [compPlan, setCompPlan] = useState("growth");
   const [message, setMessage] = useState<string | null>(null);
+  const [clover, setClover] = useState<{
+    status?: string;
+    clover_merchant_id?: string;
+    delivery_menu_id?: string | null;
+    last_push_at?: string | null;
+    last_error?: string | null;
+  } | null>(null);
 
   async function load() {
-    const { data } = await supabase.rpc("admin_get_tenant", { p_id: id });
+    const [{ data }, { data: cloverData }] = await Promise.all([
+      supabase.rpc("admin_get_tenant", { p_id: id }),
+      supabase.rpc("admin_get_tenant_clover", { p_restaurant_id: id }),
+    ]);
     const t = data as TenantDetail;
     setTenant(t);
+    setClover((cloverData as typeof clover) ?? null);
     if (t) {
       setName(t.name);
       setCurrency(t.currency);
@@ -227,6 +238,34 @@ export default function TenantDetailPage() {
             </a>
           )}
         </div>
+
+        {clover && (
+          <div className="card p-6 lg:col-span-2">
+            <h2 className="font-semibold">Clover delivery sync</h2>
+            <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="text-smoke">Status</dt>
+                <dd className="font-medium capitalize">{clover.status}</dd>
+              </div>
+              <div>
+                <dt className="text-smoke">Clover merchant</dt>
+                <dd className="font-mono text-xs">{clover.clover_merchant_id}</dd>
+              </div>
+              {clover.last_push_at && (
+                <div>
+                  <dt className="text-smoke">Last push</dt>
+                  <dd>{new Date(clover.last_push_at).toLocaleString()}</dd>
+                </div>
+              )}
+              {clover.last_error && (
+                <div className="sm:col-span-2">
+                  <dt className="text-smoke">Last error</dt>
+                  <dd className="text-alert">{clover.last_error}</dd>
+                </div>
+              )}
+            </dl>
+          </div>
+        )}
 
         <div className="card p-6">
           <h2 className="font-semibold">Edit restaurant</h2>
