@@ -1,8 +1,9 @@
 import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
+import { FEATURED_ITEMS, FOOD_IMAGES, FALLBACK_FOOD_IMAGE } from "./food-images.mjs";
 
 const env = Object.fromEntries(
-  readFileSync(new URL("file:///C:/Users/gadda/OneDrive/Desktop/projects/SyncMenu/.env"), "utf8")
+  readFileSync(new URL("../.env", import.meta.url), "utf8")
     .split(/\r?\n/)
     .filter((l) => l.includes("="))
     .map((l) => [l.slice(0, l.indexOf("=")).trim(), l.slice(l.indexOf("=") + 1).trim()])
@@ -52,6 +53,8 @@ async function createMenu({ name, template_id, template_config, orientation, sec
       description,
       price,
       sort_order: ii,
+      image_url: FOOD_IMAGES[iname] ?? FALLBACK_FOOD_IMAGE,
+      featured: FEATURED_ITEMS.has(iname),
     }));
     const { error: iErr } = await supabase.from("menu_items").insert(rows);
     if (iErr) throw new Error(iErr.message);

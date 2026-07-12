@@ -58,6 +58,13 @@ const ITEM_META = {
   "Lamb Chops": { tags: ["halal"], calories: 720 },
   "Half Chicken": { tags: ["halal"], calories: 810 },
   "Mixed Grill Platter": { tags: ["halal"], calories: 1650 },
+  "Cheese Bomb": { tags: ["vegetarian"], calories: 480 },
+  "Classic Burger": { tags: ["halal"], calories: 680 },
+  "Crispy Chicken": { tags: ["halal", "spicy"], calories: 590 },
+  "Shrimp Tackle Box": { tags: ["halal"], calories: 720 },
+  "Ghost Pepper Wings": { tags: ["spicy", "halal"], calories: 560 },
+  "#2 Chicken Combo": { tags: ["halal"], calories: 1200 },
+  "Truffle Fries": { tags: ["vegetarian"], calories: 410 },
 };
 
 for (const [name, meta] of Object.entries(ITEM_META)) {

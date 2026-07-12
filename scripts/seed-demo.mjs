@@ -2,6 +2,7 @@
 // Usage: node scripts/seed-demo.mjs
 import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
+import { FEATURED_ITEMS, FOOD_IMAGES, FALLBACK_FOOD_IMAGE } from "./food-images.mjs";
 
 const env = Object.fromEntries(
   readFileSync(new URL("../.env", import.meta.url), "utf8")
@@ -88,6 +89,8 @@ async function main() {
         description,
         price,
         sort_order: ii,
+        image_url: FOOD_IMAGES[iname] ?? FALLBACK_FOOD_IMAGE,
+        featured: FEATURED_ITEMS.has(iname),
       }));
       const { error: iErr } = await supabase.from("menu_items").insert(rows);
       if (iErr) throw new Error(`Items for "${section.name}": ${iErr.message}`);
@@ -98,8 +101,8 @@ async function main() {
 
   const mainMenu = await createMenu({
     name: "Main Menu",
-    template_id: "bold",
-    template_config: { accent: "#FF6B2C", theme: "light" },
+    template_id: "spotlight",
+    template_config: { accent: "#1E3A5F", layoutRatio: "40-60", showImages: true },
     orientation: "landscape",
     sections: [
       {
