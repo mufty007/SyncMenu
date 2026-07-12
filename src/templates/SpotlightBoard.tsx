@@ -4,13 +4,13 @@ import {
   FONTS,
   FeaturedBadge,
   ItemExtras,
-  boardBg,
+  ItemImage,
   catalogSections,
   headingFont,
   resolveHeroItem,
   type InnerProps,
 } from "./shared";
-import { HeroPanel, PhotoCutout, SplitLayout } from "./primitives";
+import { HeroPanel, SplitLayout } from "./primitives";
 
 /**
  * Spotlight — split hero + catalog. Left panel showcases a featured item;
@@ -44,21 +44,42 @@ export default function SpotlightBoard({ data, cfg, orientation, sections }: Inn
       style={{
         width: "100%",
         height: "100%",
-        background: boardBg(cfg, "#FAFBFC"),
+        background: "#FFFFFF",
         padding: portrait ? "40px 36px" : "44px 48px",
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
         fontFamily: FONTS.body,
+        color: "#1F2933",
       }}
     >
-      <header style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 28, flexShrink: 0 }}>
+      <header
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 20,
+          marginBottom: 28,
+          flexShrink: 0,
+          paddingBottom: 24,
+          borderBottom: "1px solid #E4E7EB",
+        }}
+      >
         {cfg.showLogo && data.logoUrl && (
           <img src={data.logoUrl} alt="" style={{ height: 64, width: 64, objectFit: "contain", borderRadius: 14 }} />
         )}
         <div>
-          <div style={{ fontSize: 20, fontWeight: 600, color: "#52606D" }}>{data.restaurantName}</div>
-          <div style={{ fontSize: portrait ? 38 : 44, fontWeight: 700, fontFamily: hFont, lineHeight: 1.05 }}>
+          <div style={{ fontSize: 18, fontWeight: 600, color: "#7B8794", letterSpacing: 0.3 }}>
+            {data.restaurantName}
+          </div>
+          <div
+            style={{
+              fontSize: portrait ? 36 : 42,
+              fontWeight: 700,
+              fontFamily: hFont,
+              lineHeight: 1.05,
+              color: "#1F2933",
+            }}
+          >
             {data.menuName}
           </div>
         </div>
@@ -68,21 +89,22 @@ export default function SpotlightBoard({ data, cfg, orientation, sections }: Inn
           <section key={section.id} style={{ marginBottom: 28 }}>
             <h2
               style={{
-                fontSize: 28,
+                fontSize: 22,
                 fontWeight: 700,
                 fontFamily: hFont,
-                marginBottom: 14,
+                marginBottom: 16,
                 textTransform: "uppercase",
-                letterSpacing: 1,
+                letterSpacing: 1.2,
+                color: cfg.accent,
               }}
             >
               {section.name}
             </h2>
             <div
               style={{
-                display: "grid",
-                gridTemplateColumns: portrait ? "1fr" : "repeat(2, 1fr)",
-                gap: 14,
+                display: "flex",
+                flexDirection: "column",
+                gap: 12,
               }}
             >
               {section.items.map((item) => (
@@ -114,24 +136,50 @@ function CatalogRow({
   cfg: InnerProps["cfg"];
 }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 16,
+        padding: "12px 14px",
+        borderRadius: 14,
+        background: "#F7F9FB",
+      }}
+    >
       {cfg.showImages && item.image_url && (
-        <PhotoCutout src={item.image_url} width={72} height={72} shadow={false} style={{ borderRadius: 12, objectFit: "cover" }} />
+        <ItemImage item={item} size={72} radius={12} />
       )}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 22, fontWeight: 600, lineHeight: 1.2 }}>
+        <div style={{ fontSize: 20, fontWeight: 600, lineHeight: 1.2, color: "#1F2933" }}>
           {item.name}
           {item.featured && <FeaturedBadge cfg={cfg} />}
         </div>
         {cfg.showDescriptions && item.description && (
-          <div style={{ fontSize: 16, color: "#5B6672", marginTop: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <div
+            style={{
+              fontSize: 15,
+              color: "#5B6672",
+              marginTop: 4,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
             {item.description}
           </div>
         )}
-        <ItemExtras item={item} color="#5B6672" size={15} />
+        <ItemExtras item={item} color="#5B6672" size={14} />
       </div>
       {cfg.showPrices && (
-        <div style={{ fontSize: 24, fontWeight: 700, color: cfg.accent, fontFamily: FONTS.grotesk, flexShrink: 0 }}>
+        <div
+          style={{
+            fontSize: 22,
+            fontWeight: 700,
+            color: "#1F2933",
+            fontFamily: FONTS.grotesk,
+            flexShrink: 0,
+          }}
+        >
           {formatPrice(item.price, data.currency)}
         </div>
       )}

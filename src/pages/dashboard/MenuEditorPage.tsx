@@ -7,6 +7,7 @@ import {
   Copy,
   Expand,
   ImagePlus,
+  LayoutGrid,
   Plus,
   QrCode,
   Save,
@@ -55,6 +56,7 @@ export default function MenuEditorPage() {
   const [deletedItemIds, setDeletedItemIds] = useState<string[]>([]);
   const [showPreview, setShowPreview] = useState(false);
   const [showQr, setShowQr] = useState(false);
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false);
   const [isDeliveryMenu, setIsDeliveryMenu] = useState(false);
   const bgFileRef = useRef<HTMLInputElement>(null);
   const bgVideoFileRef = useRef<HTMLInputElement>(null);
@@ -431,6 +433,34 @@ export default function MenuEditorPage() {
         </PreviewModal>
       )}
       {showQr && <QrModal menuId={menu.id} onClose={() => setShowQr(false)} />}
+      {showTemplatePicker && (
+        <TemplatePickerModal
+          currentId={menu.template_id}
+          config={config}
+          previewData={{
+            restaurantName: restaurant.name,
+            logoUrl: restaurant.logo_url,
+            currency: restaurant.currency,
+            menuName: menu.name,
+            sections,
+          }}
+          onClose={() => setShowTemplatePicker(false)}
+          onSelect={(templateId) => {
+            const current = TEMPLATES.find((x) => x.id === menu.template_id);
+            const selected = TEMPLATES.find((x) => x.id === templateId);
+            const accentUntouched =
+              config.accent.toLowerCase() ===
+              (current?.defaultAccent ?? "#ff6b2c").toLowerCase();
+            patchMenu({
+              template_id: templateId,
+              ...(accentUntouched && selected
+                ? { template_config: { ...config, accent: selected.defaultAccent } }
+                : {}),
+            });
+            setShowTemplatePicker(false);
+          }}
+        />
+      )}
 
       <div className="mt-6 grid grid-cols-1 gap-8 xl:grid-cols-[1fr_420px]">
         {/* -------- content editor -------- */}
@@ -506,63 +536,49 @@ export default function MenuEditorPage() {
           <div className="card space-y-5 p-5">
             <div>
               <p className="label">Template</p>
-              <div className="space-y-2">
-                {TEMPLATES.map((t) => {
-                  const current = TEMPLATES.find((x) => x.id === menu.template_id);
-                  const accentUntouched =
-                    config.accent.toLowerCase() ===
-                    (current?.defaultAccent ?? "#ff6b2c").toLowerCase();
-                  return (
-                    <button
-                      key={t.id}
-                      onClick={() =>
-                        patchMenu({
-                          template_id: t.id as TemplateId,
-                          // follow the template's signature accent unless customized
-                          ...(accentUntouched
-                            ? { template_config: { ...config, accent: t.defaultAccent } }
-                            : {}),
-                        })
-                      }
-                      className={`flex w-full items-center gap-3 rounded-xl border p-2 text-left transition-colors ${
-                        menu.template_id === t.id
-                          ? "border-brand bg-brand/5"
-                          : "border-mist hover:border-smoke/40"
-                      }`}
-                    >
-                      <div className="w-[104px] shrink-0 overflow-hidden rounded-lg border border-mist/60">
-                        <ScaledFrame designWidth={1920} designHeight={1080}>
-                          <MenuBoard
-                            data={{
-                              restaurantName: restaurant.name,
-                              logoUrl: restaurant.logo_url,
-                              currency: restaurant.currency,
-                              menuName: menu.name,
-                              sections,
-                            }}
-                            templateId={t.id}
-                            config={{
-                              ...config,
-                              accent: accentUntouched ? t.defaultAccent : config.accent,
-                            }}
-                            orientation="landscape"
-                          />
-                        </ScaledFrame>
-                      </div>
-                      <div className="min-w-0">
-                        <p
-                          className={`text-sm font-semibold ${
-                            menu.template_id === t.id ? "text-brand" : "text-ink"
-                          }`}
-                        >
-                          {t.name}
-                        </p>
-                        <p className="mt-0.5 text-xs leading-snug text-smoke">{t.blurb}</p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+              {(() => {
+                const current = TEMPLATES.find((x) => x.id === menu.template_id);
+                const accentUntouched =
+                  config.accent.toLowerCase() ===
+                  (current?.defaultAccent ?? "#ff6b2c").toLowerCase();
+                return (
+                  <button
+                    type="button"
+                    onClick={() => setShowTemplatePicker(true)}
+                    className="flex w-full items-center gap-3 rounded-xl border border-mist p-2 text-left transition-colors hover:border-smoke/40"
+                  >
+                    <div className="w-[104px] shrink-0 overflow-hidden rounded-lg border border-mist/60">
+                      <ScaledFrame designWidth={1920} designHeight={1080}>
+                        <MenuBoard
+                          data={{
+                            restaurantName: restaurant.name,
+                            logoUrl: restaurant.logo_url,
+                            currency: restaurant.currency,
+                            menuName: menu.name,
+                            sections,
+                          }}
+                          templateId={menu.template_id}
+                          config={{
+                            ...config,
+                            accent: accentUntouched
+                              ? current?.defaultAccent ?? config.accent
+                              : config.accent,
+                          }}
+                          orientation="landscape"
+                        />
+                      </ScaledFrame>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-ink">{current?.name ?? "Template"}</p>
+                      <p className="mt-0.5 text-xs leading-snug text-smoke">{current?.blurb}</p>
+                    </div>
+                    <span className="flex shrink-0 items-center gap-1.5 text-xs font-semibold text-brand">
+                      <LayoutGrid size={14} />
+                      Change
+                    </span>
+                  </button>
+                );
+              })()}
             </div>
 
             <div>
@@ -962,6 +978,101 @@ function Choice<T extends string>({
             {l}
           </button>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function TemplatePickerModal({
+  currentId,
+  config,
+  previewData,
+  onClose,
+  onSelect,
+}: {
+  currentId: TemplateId;
+  config: TemplateConfig;
+  previewData: {
+    restaurantName: string;
+    logoUrl: string | null;
+    currency: string;
+    menuName: string;
+    sections: SectionWithItems[];
+  };
+  onClose: () => void;
+  onSelect: (templateId: TemplateId) => void;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const current = TEMPLATES.find((x) => x.id === currentId);
+  const accentUntouched =
+    config.accent.toLowerCase() === (current?.defaultAccent ?? "#ff6b2c").toLowerCase();
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4 sm:p-6"
+      onClick={onClose}
+    >
+      <div
+        className="card flex max-h-[min(90vh,920px)] w-full max-w-5xl flex-col overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4 border-b border-mist px-5 py-4 sm:px-6">
+          <div>
+            <h2 className="text-lg font-semibold">Choose a template</h2>
+            <p className="mt-1 text-sm text-smoke">
+              Pick a layout for this menu. Your items and sections stay the same.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="rounded-lg p-2 text-smoke transition-colors hover:bg-mist/60 hover:text-ink"
+            onClick={onClose}
+            title="Close (Esc)"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="overflow-y-auto px-5 py-5 sm:px-6">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {TEMPLATES.map((t) => {
+              const selected = currentId === t.id;
+              const previewAccent = accentUntouched ? t.defaultAccent : config.accent;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => onSelect(t.id)}
+                  className={`rounded-xl border p-2 text-left transition-colors ${
+                    selected
+                      ? "border-brand bg-brand/5 ring-1 ring-brand"
+                      : "border-mist hover:border-smoke/40"
+                  }`}
+                >
+                  <div className="overflow-hidden rounded-lg border border-mist/60">
+                    <ScaledFrame designWidth={1920} designHeight={1080}>
+                      <MenuBoard
+                        data={previewData}
+                        templateId={t.id}
+                        config={{ ...config, accent: previewAccent }}
+                        orientation="landscape"
+                      />
+                    </ScaledFrame>
+                  </div>
+                  <p className={`mt-2 text-sm font-semibold ${selected ? "text-brand" : "text-ink"}`}>
+                    {t.name}
+                  </p>
+                  <p className="mt-0.5 text-xs leading-snug text-smoke">{t.blurb}</p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </div>
   );

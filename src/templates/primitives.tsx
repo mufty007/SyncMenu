@@ -141,7 +141,7 @@ interface HeroPanelProps {
   children?: ReactNode;
 }
 
-/** Full-height hero panel with large product image, title, and price badge. */
+/** Full-bleed hero panel — image or gradient fills the panel; text sits on a bottom vignette. */
 export function HeroPanel({
   accent,
   dark = true,
@@ -156,32 +156,62 @@ export function HeroPanel({
     ? `linear-gradient(165deg, ${accent} 0%, ${shade(accent, -30)} 100%)`
     : `linear-gradient(165deg, ${accent}18 0%, #FFFFFF 100%)`;
   const text = dark ? "#FFFFFF" : "#1F2933";
-  const sub = dark ? "rgba(255,255,255,0.82)" : "#52606D";
+  const sub = dark ? "rgba(255,255,255,0.88)" : "#52606D";
 
   return (
     <div
       style={{
         width: "100%",
         height: "100%",
-        background: bg,
-        color: text,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "48px 40px",
         position: "relative",
         overflow: "hidden",
         fontFamily: FONTS.body,
+        color: text,
       }}
     >
-      <DecorativeBlob color={dark ? "#FFFFFF" : accent} opacity={dark ? 0.08 : 0.12} />
-      {imageUrl && (
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", width: "100%", maxHeight: "55%" }}>
-          <PhotoCutout src={imageUrl} height="100%" width="auto" shadow />
-        </div>
+      {imageUrl ? (
+        <img
+          src={imageUrl}
+          alt=""
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            display: "block",
+          }}
+        />
+      ) : (
+        <div style={{ position: "absolute", inset: 0, background: bg }} />
       )}
-      <div style={{ textAlign: "center", width: "100%", marginTop: imageUrl ? 24 : 0 }}>
+
+      {!imageUrl && <DecorativeBlob color={dark ? "#FFFFFF" : accent} opacity={dark ? 0.08 : 0.12} />}
+
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: imageUrl
+            ? "linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.5) 32%, rgba(0,0,0,0.12) 58%, transparent 78%)"
+            : dark
+              ? "linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 45%)"
+              : undefined,
+          pointerEvents: "none",
+        }}
+      />
+
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          padding: "44px 40px 48px",
+          textAlign: "left",
+          zIndex: 1,
+        }}
+      >
         {badge}
         <div
           style={{
@@ -191,18 +221,37 @@ export function HeroPanel({
             lineHeight: 1.05,
             textTransform: "uppercase",
             letterSpacing: 1,
+            color: dark || imageUrl ? "#FFFFFF" : text,
           }}
         >
           {title}
         </div>
         {subtitle && (
-          <div style={{ fontSize: 22, color: sub, marginTop: 12, lineHeight: 1.4, maxWidth: 420, margin: "12px auto 0" }}>
+          <div
+            style={{
+              fontSize: 22,
+              color: imageUrl || dark ? "rgba(255,255,255,0.88)" : sub,
+              marginTop: 10,
+              lineHeight: 1.4,
+              maxWidth: 480,
+            }}
+          >
             {subtitle}
           </div>
         )}
         {price && (
-          <div style={{ marginTop: 28 }}>
-            <PriceBadge price={price} size="lg" color={dark ? "#FFFFFF" : accent} textColor={dark ? accent : "#FFFFFF"} />
+          <div
+            style={{
+              marginTop: 18,
+              fontFamily: FONTS.grotesk,
+              fontSize: 44,
+              fontWeight: 700,
+              lineHeight: 1,
+              color: dark || imageUrl ? "#FFFFFF" : text,
+              letterSpacing: -0.5,
+            }}
+          >
+            {price}
           </div>
         )}
       </div>

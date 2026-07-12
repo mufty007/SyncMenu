@@ -4,12 +4,12 @@ import {
   FONTS,
   FeaturedBadge,
   ItemExtras,
-  boardBg,
+  ItemImage,
   headingFont,
   resolveHeroItem,
   type InnerProps,
 } from "./shared";
-import { DecorativeBlob, PhotoCutout, PriceBadge } from "./primitives";
+import { DecorativeBlob } from "./primitives";
 
 /**
  * Promo Hero — full-screen promotional layout with giant product photo,
@@ -29,10 +29,7 @@ export default function PromoBoard({ data, cfg, orientation, sections }: InnerPr
       style={{
         width: "100%",
         height: "100%",
-        background: boardBg(
-          cfg,
-          `linear-gradient(145deg, ${cfg.accent} 0%, ${shade(cfg.accent, -35)} 55%, #0D1117 100%)`
-        ),
+        background: cfg.backgroundVideo ? "#0D1117" : undefined,
         color: "#FFFFFF",
         display: "flex",
         flexDirection: portrait ? "column" : "row",
@@ -51,34 +48,65 @@ export default function PromoBoard({ data, cfg, orientation, sections }: InnerPr
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.35 }}
         />
       )}
-      <DecorativeBlob color="#FFFFFF" opacity={0.12} />
 
-      {/* Hero area */}
+      {/* Hero area — full-bleed image or gradient */}
       <div
         style={{
           flex: portrait ? "1 1 55%" : "1 1 62%",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: portrait ? "48px 40px" : "48px 64px",
           position: "relative",
-          zIndex: 1,
+          overflow: "hidden",
+          minHeight: 0,
         }}
       >
+        {cfg.showImages && hero?.image_url ? (
+          <img
+            src={hero.image_url}
+            alt=""
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+          />
+        ) : (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: `linear-gradient(145deg, ${cfg.accent} 0%, ${shade(cfg.accent, -35)} 55%, #0D1117 100%)`,
+            }}
+          />
+        )}
+        <DecorativeBlob color="#FFFFFF" opacity={0.12} />
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background:
+              "linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.5) 32%, rgba(0,0,0,0.12) 58%, transparent 78%)",
+            pointerEvents: "none",
+          }}
+        />
         {cfg.showLogo && data.logoUrl && (
           <img
             src={data.logoUrl}
             alt=""
-            style={{ height: 56, position: "absolute", top: 32, left: portrait ? 40 : 64, objectFit: "contain" }}
+            style={{
+              height: 56,
+              position: "absolute",
+              top: 32,
+              left: portrait ? 40 : 48,
+              objectFit: "contain",
+              zIndex: 2,
+            }}
           />
         )}
-        {cfg.showImages && hero?.image_url && (
-          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", width: "100%", maxHeight: portrait ? "50%" : "65%" }}>
-            <PhotoCutout src={hero.image_url} height="100%" width="auto" />
-          </div>
-        )}
-        <div style={{ textAlign: "center", marginTop: 20 }}>
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            padding: portrait ? "40px" : "48px 56px",
+            zIndex: 1,
+          }}
+        >
           {hero?.featured && (
             <div style={{ marginBottom: 12 }}>
               <FeaturedBadge cfg={cfg} />
@@ -87,7 +115,7 @@ export default function PromoBoard({ data, cfg, orientation, sections }: InnerPr
           <div
             style={{
               fontFamily: hFont,
-              fontSize: portrait ? 56 : 72,
+              fontSize: portrait ? 52 : 64,
               fontWeight: 800,
               lineHeight: 1.02,
               textTransform: "uppercase",
@@ -97,19 +125,21 @@ export default function PromoBoard({ data, cfg, orientation, sections }: InnerPr
             {hero?.name ?? data.menuName}
           </div>
           {cfg.showDescriptions && hero?.description && (
-            <div style={{ fontSize: 24, opacity: 0.88, marginTop: 14, maxWidth: 560, margin: "14px auto 0" }}>
+            <div style={{ fontSize: 22, opacity: 0.9, marginTop: 12, maxWidth: 560, lineHeight: 1.4 }}>
               {hero.description}
             </div>
           )}
           {cfg.showPrices && hero && (
-            <div style={{ marginTop: 28 }}>
-              <PriceBadge
-                price={formatPrice(hero.price, data.currency)}
-                size="lg"
-                variant="pill"
-                color="#FFFFFF"
-                textColor={cfg.accent}
-              />
+            <div
+              style={{
+                marginTop: 18,
+                fontFamily: FONTS.grotesk,
+                fontSize: 44,
+                fontWeight: 700,
+                lineHeight: 1,
+              }}
+            >
+              {formatPrice(hero.price, data.currency)}
             </div>
           )}
         </div>
@@ -120,29 +150,30 @@ export default function PromoBoard({ data, cfg, orientation, sections }: InnerPr
         <div
           style={{
             flex: portrait ? "0 0 auto" : "0 0 38%",
-            background: "rgba(255,255,255,0.1)",
-            backdropFilter: "blur(12px)",
-            padding: portrait ? "28px 36px 36px" : "40px 48px",
+            background: "#FFFFFF",
+            color: "#1F2933",
+            padding: portrait ? "28px 36px 36px" : "40px 44px",
             display: "flex",
             flexDirection: "column",
             justifyContent: "center",
             position: "relative",
             zIndex: 1,
+            overflow: "hidden",
           }}
         >
           <div
             style={{
               fontFamily: FONTS.condensed,
-              fontSize: 32,
+              fontSize: 28,
               letterSpacing: 2,
               textTransform: "uppercase",
               marginBottom: 20,
-              opacity: 0.9,
+              color: cfg.accent,
             }}
           >
             {quickSection?.name ?? "Also try"}
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {quickItems.map((item) => (
               <QuickRow key={item.id} item={item} data={data} cfg={cfg} />
             ))}
@@ -163,13 +194,31 @@ function QuickRow({
   cfg: InnerProps["cfg"];
 }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
-      <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: 22, fontWeight: 600 }}>{item.name}</div>
-        <ItemExtras item={item} color="rgba(255,255,255,0.7)" size={14} />
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 14,
+        padding: "10px 12px",
+        borderRadius: 12,
+        background: "#F7F9FB",
+      }}
+    >
+      {cfg.showImages && item.image_url && <ItemImage item={item} size={56} radius={10} />}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 20, fontWeight: 600, color: "#1F2933" }}>{item.name}</div>
+        <ItemExtras item={item} color="#5B6672" size={14} />
       </div>
       {cfg.showPrices && (
-        <div style={{ fontSize: 24, fontWeight: 700, fontFamily: FONTS.grotesk, flexShrink: 0 }}>
+        <div
+          style={{
+            fontSize: 22,
+            fontWeight: 700,
+            fontFamily: FONTS.grotesk,
+            flexShrink: 0,
+            color: "#1F2933",
+          }}
+        >
           {formatPrice(item.price, data.currency)}
         </div>
       )}

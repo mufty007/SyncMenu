@@ -55,6 +55,7 @@ async function main() {
 
   let updated = 0;
   let featured = 0;
+  const lambChopsId = items?.find((i) => i.name === "Lamb Chops")?.id ?? null;
   const wingsItemId = items?.find((i) => i.name === "6 Hot Wings")?.id ?? null;
   const cheeseBombId = items?.find((i) => i.name === "Cheese Bomb")?.id ?? null;
   const shrimpId = items?.find((i) => i.name === "Shrimp Tackle Box")?.id ?? null;
@@ -63,7 +64,6 @@ async function main() {
     const image_url = FOOD_IMAGES[item.name] ?? FALLBACK_FOOD_IMAGE;
     const isFeatured = FEATURED_ITEMS.has(item.name);
     const patch = { image_url, featured: isFeatured };
-    if (item.image_url === image_url && item.featured === isFeatured) continue;
 
     const { error } = await supabase.from("menu_items").update(patch).eq("id", item.id);
     if (error) throw new Error(`Updating "${item.name}": ${error.message}`);
@@ -73,6 +73,28 @@ async function main() {
   }
 
   // Upgrade key menus for photo-forward templates
+  const eveningMenu = menus.find((m) => m.name === "Evening Grill" || m.name === "Evening");
+  if (eveningMenu && lambChopsId) {
+    const grillSection = sections?.find(
+      (s) => s.menu_id === eveningMenu.id && s.name.toLowerCase().includes("grill")
+    );
+    await supabase
+      .from("menus")
+      .update({
+        template_id: "spotlight",
+        template_config: {
+          ...eveningMenu.template_config,
+          accent: "#1E3A5F",
+          layoutRatio: "40-60",
+          heroItemId: lambChopsId,
+          heroSectionId: grillSection?.id ?? null,
+          showImages: true,
+        },
+      })
+      .eq("id", eveningMenu.id);
+    console.log("Evening Grill → Spotlight template with hero Lamb Chops");
+  }
+
   const mainMenu = menus.find((m) => m.name === "Main Menu");
   if (mainMenu) {
     await supabase
