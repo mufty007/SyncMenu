@@ -9,6 +9,7 @@ import {
   ImagePlus,
   Plus,
   QrCode,
+  Save,
   Star,
   Trash2,
   Wand2,
@@ -34,7 +35,8 @@ import ScaledFrame from "../../components/ScaledFrame";
 import Toggle from "../../components/Toggle";
 import { deleteMenuImageUrl, uploadMenuImage } from "../../lib/uploadImage";
 
-type SectionWithItems = MenuSection & { items: MenuItem[] };
+type DraftItem = MenuItem & { _pending?: boolean };
+type SectionWithItems = MenuSection & { items: DraftItem[]; _pending?: boolean };
 
 const ACCENT_SWATCHES = ["#FF6B2C", "#E5484D", "#22B573", "#2563EB", "#7C3AED", "#FFB020"];
 
@@ -45,6 +47,11 @@ export default function MenuEditorPage() {
   const [menu, setMenu] = useState<Menu | null>(null);
   const [sections, setSections] = useState<SectionWithItems[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [deletedSectionIds, setDeletedSectionIds] = useState<string[]>([]);
+  const [deletedItemIds, setDeletedItemIds] = useState<string[]>([]);
   const [showPreview, setShowPreview] = useState(false);
   const [showQr, setShowQr] = useState(false);
   const bgFileRef = useRef<HTMLInputElement>(null);
@@ -69,6 +76,16 @@ export default function MenuEditorPage() {
     })();
   }, [menuId]);
 
+  useEffect(() => {
+    if (!dirty) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [dirty]);
+
   if (loading) return <p className="text-sm text-smoke">Loading…</p>;
   if (!menu || !restaurant) {
     return (
@@ -83,13 +100,18 @@ export default function MenuEditorPage() {
 
   const config: TemplateConfig = { ...DEFAULT_TEMPLATE_CONFIG, ...menu.template_config };
 
-  async function patchMenu(patch: Partial<Menu>) {
+  function markDirty() {
+    setDirty(true);
+    setSaveMessage(null);
+  }
+
+  function patchMenu(patch: Partial<Menu>) {
     setMenu((m) => (m ? { ...m, ...patch } : m));
-    await supabase.from("menus").update(patch).eq("id", menu!.id);
+    markDirty();
   }
 
   function patchConfig(patch: Partial<TemplateConfig>) {
-    void patchMenu({ template_config: { ...config, ...patch } });
+    patchMenu({ template_config: { ...config, ...patch } });
   }
 
   async function uploadBackground(file: File) {
@@ -103,6 +125,105 @@ export default function MenuEditorPage() {
     }
   }
 
+  async function saveAndPublish() {
+    if (!menu) return;
+    setSaving(true);
+    setSaveMessage(null);
+    try {
+      const { error: menuErr } = await supabase
+        .from("menus")
+        .update({
+          name: menu.name.trim() || "Untitled menu",
+          template_id: menu.template_id,
+          template_config: menu.template_config,
+          orientation: menu.orientation,
+        })
+        .eq("id", menu.id);
+      if (menuErr) throw menuErr;
+
+      if (deletedItemIds.length) {
+        const { error } = await supabase.from("menu_items").delete().in("id", deletedItemIds);
+        if (error) throw error;
+      }
+      if (deletedSectionIds.length) {
+        const { error } = await supabase.from("menu_sections").delete().in("id", deletedSectionIds);
+        if (error) throw error;
+      }
+
+      const sectionIdMap = new Map<string, string>();
+      for (const section of sections) {
+        if (section._pending) {
+          const { data, error } = await supabase
+            .from("menu_sections")
+            .insert({
+              menu_id: menu.id,
+              name: section.name.trim() || "Section",
+              sort_order: section.sort_order,
+            })
+            .select()
+            .single();
+          if (error) throw error;
+          sectionIdMap.set(section.id, (data as MenuSection).id);
+        } else {
+          const { error } = await supabase
+            .from("menu_sections")
+            .update({
+              name: section.name.trim() || "Section",
+              sort_order: section.sort_order,
+            })
+            .eq("id", section.id);
+          if (error) throw error;
+          sectionIdMap.set(section.id, section.id);
+        }
+      }
+
+      for (const section of sections) {
+        const sectionId = sectionIdMap.get(section.id)!;
+        for (const item of section.items) {
+          const payload = {
+            section_id: sectionId,
+            name: item.name.trim() || "Item",
+            description: item.description ?? "",
+            price: item.price,
+            image_url: item.image_url,
+            available: item.available,
+            featured: item.featured ?? false,
+            tags: item.tags ?? [],
+            calories: item.calories ?? null,
+            sort_order: item.sort_order,
+          };
+          if (item._pending) {
+            const { error } = await supabase.from("menu_items").insert(payload);
+            if (error) throw error;
+          } else {
+            const { error } = await supabase.from("menu_items").update(payload).eq("id", item.id);
+            if (error) throw error;
+          }
+        }
+      }
+
+      const { data: secs } = await supabase
+        .from("menu_sections")
+        .select("*, items:menu_items(*)")
+        .eq("menu_id", menu.id)
+        .order("sort_order");
+      setSections(
+        ((secs as SectionWithItems[]) ?? []).map((s) => ({
+          ...s,
+          items: (s.items ?? []).sort((a, b) => a.sort_order - b.sort_order),
+        }))
+      );
+      setDeletedSectionIds([]);
+      setDeletedItemIds([]);
+      setDirty(false);
+      setSaveMessage("Published — your screens and QR menu will update shortly.");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Could not save menu");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function deleteMenu() {
     if (!confirm(`Delete "${menu!.name}"? Screens showing it will go blank.`)) return;
     await supabase.from("menus").delete().eq("id", menu!.id);
@@ -111,46 +232,54 @@ export default function MenuEditorPage() {
 
   /* ---------------- sections ---------------- */
 
-  async function addSection() {
+  function addSection() {
     const sort = sections.length ? Math.max(...sections.map((s) => s.sort_order)) + 1 : 0;
-    const { data } = await supabase
-      .from("menu_sections")
-      .insert({ menu_id: menu!.id, name: "New section", sort_order: sort })
-      .select()
-      .single();
-    if (data) setSections((s) => [...s, { ...(data as MenuSection), items: [] }]);
+    setSections((s) => [
+      ...s,
+      {
+        id: crypto.randomUUID(),
+        menu_id: menu!.id,
+        name: "New section",
+        sort_order: sort,
+        items: [],
+        _pending: true,
+      },
+    ]);
+    markDirty();
   }
 
-  async function renameSection(id: string, name: string) {
+  function renameSection(id: string, name: string) {
     setSections((s) => s.map((x) => (x.id === id ? { ...x, name } : x)));
-    await supabase.from("menu_sections").update({ name }).eq("id", id);
+    markDirty();
   }
 
-  async function deleteSection(section: SectionWithItems) {
+  function deleteSection(section: SectionWithItems) {
     if (section.items.length > 0 && !confirm(`Delete "${section.name}" and its ${section.items.length} item(s)?`)) {
       return;
     }
+    if (!section._pending) {
+      setDeletedSectionIds((ids) => [...ids, section.id]);
+      setDeletedItemIds((ids) => [
+        ...ids,
+        ...section.items.filter((i) => !i._pending).map((i) => i.id),
+      ]);
+    }
     setSections((s) => s.filter((x) => x.id !== section.id));
-    await supabase.from("menu_sections").delete().eq("id", section.id);
+    markDirty();
   }
 
-  async function moveSection(index: number, dir: -1 | 1) {
+  function moveSection(index: number, dir: -1 | 1) {
     const target = index + dir;
     if (target < 0 || target >= sections.length) return;
     const next = sections.slice();
     [next[index], next[target]] = [next[target], next[index]];
-    const reordered = next.map((s, i) => ({ ...s, sort_order: i }));
-    setSections(reordered);
-    await Promise.all(
-      reordered.map((s) =>
-        supabase.from("menu_sections").update({ sort_order: s.sort_order }).eq("id", s.id)
-      )
-    );
+    setSections(next.map((s, i) => ({ ...s, sort_order: i })));
+    markDirty();
   }
 
   /* ---------------- items ---------------- */
 
-  function setItem(sectionId: string, itemId: string, patch: Partial<MenuItem>) {
+  function updateItem(sectionId: string, itemId: string, patch: Partial<MenuItem>) {
     setSections((s) =>
       s.map((sec) =>
         sec.id === sectionId
@@ -158,41 +287,43 @@ export default function MenuEditorPage() {
           : sec
       )
     );
+    markDirty();
   }
 
-  async function addItem(section: SectionWithItems) {
+  function addItem(section: SectionWithItems) {
     const sort = section.items.length
       ? Math.max(...section.items.map((i) => i.sort_order)) + 1
       : 0;
-    const { data } = await supabase
-      .from("menu_items")
-      .insert({ section_id: section.id, name: "New item", price: 0, sort_order: sort })
-      .select()
-      .single();
-    if (data) {
-      setSections((s) =>
-        s.map((sec) =>
-          sec.id === section.id ? { ...sec, items: [...sec.items, data as MenuItem] } : sec
-        )
-      );
+    const item: DraftItem = {
+      id: crypto.randomUUID(),
+      section_id: section.id,
+      name: "New item",
+      description: "",
+      price: 0,
+      image_url: null,
+      available: true,
+      sort_order: sort,
+      _pending: true,
+    };
+    setSections((s) =>
+      s.map((sec) => (sec.id === section.id ? { ...sec, items: [...sec.items, item] } : sec))
+    );
+    markDirty();
+  }
+
+  function deleteItem(sectionId: string, itemId: string, pending?: boolean) {
+    if (!pending) {
+      setDeletedItemIds((ids) => [...ids, itemId]);
     }
-  }
-
-  async function saveItem(sectionId: string, itemId: string, patch: Partial<MenuItem>) {
-    setItem(sectionId, itemId, patch);
-    await supabase.from("menu_items").update(patch).eq("id", itemId);
-  }
-
-  async function deleteItem(sectionId: string, itemId: string) {
     setSections((s) =>
       s.map((sec) =>
         sec.id === sectionId ? { ...sec, items: sec.items.filter((i) => i.id !== itemId) } : sec
       )
     );
-    await supabase.from("menu_items").delete().eq("id", itemId);
+    markDirty();
   }
 
-  async function moveItem(section: SectionWithItems, index: number, dir: -1 | 1) {
+  function moveItem(section: SectionWithItems, index: number, dir: -1 | 1) {
     const target = index + dir;
     if (target < 0 || target >= section.items.length) return;
     const next = section.items.slice();
@@ -201,18 +332,14 @@ export default function MenuEditorPage() {
     setSections((s) =>
       s.map((sec) => (sec.id === section.id ? { ...sec, items: reordered } : sec))
     );
-    await Promise.all(
-      reordered.map((i) =>
-        supabase.from("menu_items").update({ sort_order: i.sort_order }).eq("id", i.id)
-      )
-    );
+    markDirty();
   }
 
   async function uploadItemImage(sectionId: string, itemId: string, file: File) {
     try {
       const path = `${restaurant!.id}/${itemId}-${Date.now()}.jpg`;
       const publicUrl = await uploadMenuImage(path, file);
-      await saveItem(sectionId, itemId, { image_url: publicUrl });
+      updateItem(sectionId, itemId, { image_url: publicUrl });
     } catch (err) {
       alert(err instanceof Error ? err.message : "Upload failed");
     }
@@ -229,9 +356,20 @@ export default function MenuEditorPage() {
         <input
           className="min-w-0 flex-1 rounded-xl border border-transparent bg-transparent px-2 py-1 text-2xl font-semibold outline-none transition-colors focus:border-mist focus:bg-white"
           value={menu.name}
-          onChange={(e) => setMenu({ ...menu, name: e.target.value })}
-          onBlur={(e) => void patchMenu({ name: e.target.value.trim() || "Untitled menu" })}
+          onChange={(e) => patchMenu({ name: e.target.value })}
         />
+        {dirty && (
+          <span className="rounded-full bg-amber/15 px-2.5 py-1 text-xs font-medium text-amber">
+            Unsaved changes
+          </span>
+        )}
+        <button
+          className="btn-primary"
+          disabled={!dirty || saving}
+          onClick={() => void saveAndPublish()}
+        >
+          <Save size={16} /> {saving ? "Publishing…" : "Save & publish"}
+        </button>
         <button className="btn-secondary" onClick={() => setShowQr(true)} title="Customer QR menu">
           <QrCode size={16} /> QR menu
         </button>
@@ -242,6 +380,12 @@ export default function MenuEditorPage() {
           <Trash2 size={16} /> Delete
         </button>
       </div>
+
+      {saveMessage && (
+        <div className="mt-3 rounded-xl border border-live/30 bg-live/10 px-4 py-2.5 text-sm">
+          {saveMessage}
+        </div>
+      )}
 
       {showPreview && (
         <PreviewModal onClose={() => setShowPreview(false)}>
@@ -270,20 +414,21 @@ export default function MenuEditorPage() {
                 <input
                   className="min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-2 py-1 text-lg font-semibold outline-none focus:border-mist"
                   value={section.name}
-                  onChange={(e) =>
+                  onChange={(e) => {
                     setSections((s) =>
                       s.map((x) => (x.id === section.id ? { ...x, name: e.target.value } : x))
-                    )
-                  }
-                  onBlur={(e) => void renameSection(section.id, e.target.value.trim() || "Section")}
+                    );
+                    markDirty();
+                  }}
+                  onBlur={(e) => renameSection(section.id, e.target.value.trim() || "Section")}
                 />
-                <button className="btn-ghost px-2" onClick={() => void moveSection(si, -1)} disabled={si === 0} title="Move up">
+                <button className="btn-ghost px-2" onClick={() => moveSection(si, -1)} disabled={si === 0} title="Move up">
                   <ArrowUp size={15} />
                 </button>
-                <button className="btn-ghost px-2" onClick={() => void moveSection(si, 1)} disabled={si === sections.length - 1} title="Move down">
+                <button className="btn-ghost px-2" onClick={() => moveSection(si, 1)} disabled={si === sections.length - 1} title="Move down">
                   <ArrowDown size={15} />
                 </button>
-                <button className="btn-ghost px-2 text-alert hover:bg-alert/10 hover:text-alert" onClick={() => void deleteSection(section)} title="Delete section">
+                <button className="btn-ghost px-2 text-alert hover:bg-alert/10 hover:text-alert" onClick={() => deleteSection(section)} title="Delete section">
                   <Trash2 size={15} />
                 </button>
               </div>
@@ -294,20 +439,20 @@ export default function MenuEditorPage() {
                     key={item.id}
                     item={item}
                     currency={restaurant.currency}
-                    onSave={(patch) => void saveItem(section.id, item.id, patch)}
-                    onDelete={() => void deleteItem(section.id, item.id)}
-                    onMoveUp={ii > 0 ? () => void moveItem(section, ii, -1) : undefined}
-                    onMoveDown={ii < section.items.length - 1 ? () => void moveItem(section, ii, 1) : undefined}
+                    onChange={(patch) => updateItem(section.id, item.id, patch)}
+                    onDelete={() => deleteItem(section.id, item.id, item._pending)}
+                    onMoveUp={ii > 0 ? () => moveItem(section, ii, -1) : undefined}
+                    onMoveDown={ii < section.items.length - 1 ? () => moveItem(section, ii, 1) : undefined}
                     onImage={(file) => void uploadItemImage(section.id, item.id, file)}
                   />
                 ))}
               </div>
-              <button className="btn-ghost mt-3 text-brand hover:bg-brand/10 hover:text-brand" onClick={() => void addItem(section)}>
+              <button className="btn-ghost mt-3 text-brand hover:bg-brand/10 hover:text-brand" onClick={() => addItem(section)}>
                 <Plus size={15} /> Add item
               </button>
             </div>
           ))}
-          <button className="btn-secondary w-full" onClick={() => void addSection()}>
+          <button className="btn-secondary w-full" onClick={() => addSection()}>
             <Plus size={16} /> Add section
           </button>
         </div>
@@ -344,7 +489,7 @@ export default function MenuEditorPage() {
                     <button
                       key={t.id}
                       onClick={() =>
-                        void patchMenu({
+                        patchMenu({
                           template_id: t.id as TemplateId,
                           // follow the template's signature accent unless customized
                           ...(accentUntouched
@@ -399,7 +544,7 @@ export default function MenuEditorPage() {
                 {(["landscape", "portrait"] as Orientation[]).map((o) => (
                   <button
                     key={o}
-                    onClick={() => void patchMenu({ orientation: o })}
+                    onClick={() => patchMenu({ orientation: o })}
                     className={`rounded-xl border px-2 py-2.5 text-sm font-medium capitalize transition-colors ${
                       menu.orientation === o
                         ? "border-brand bg-brand/10 text-brand"
@@ -616,12 +761,8 @@ export default function MenuEditorPage() {
               <input
                 className="input"
                 placeholder="e.g. Free wifi: BigBite — Ask about our meal deals!"
-                defaultValue={config.footerText}
-                onBlur={(e) => {
-                  if (e.target.value !== config.footerText) {
-                    patchConfig({ footerText: e.target.value });
-                  }
-                }}
+                value={config.footerText ?? ""}
+                onChange={(e) => patchConfig({ footerText: e.target.value })}
               />
               <div className="mt-3">
                 <Toggle
@@ -637,12 +778,8 @@ export default function MenuEditorPage() {
               <input
                 className="input"
                 placeholder="Popular"
-                defaultValue={config.badgeText}
-                onBlur={(e) => {
-                  if (e.target.value !== config.badgeText) {
-                    patchConfig({ badgeText: e.target.value });
-                  }
-                }}
+                value={config.badgeText ?? ""}
+                onChange={(e) => patchConfig({ badgeText: e.target.value })}
               />
               <p className="mt-1.5 text-xs text-smoke">
                 Star an item in the list to feature it on the board.
@@ -796,15 +933,15 @@ function QrModal({ menuId, onClose }: { menuId: string; onClose: () => void }) {
 function ItemRow({
   item,
   currency,
-  onSave,
+  onChange,
   onDelete,
   onMoveUp,
   onMoveDown,
   onImage,
 }: {
-  item: MenuItem;
+  item: DraftItem;
   currency: string;
-  onSave: (patch: Partial<MenuItem>) => void;
+  onChange: (patch: Partial<MenuItem>) => void;
   onDelete: () => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
@@ -815,6 +952,13 @@ function ItemRow({
   const [price, setPrice] = useState(String(item.price));
   const [calories, setCalories] = useState(item.calories != null ? String(item.calories) : "");
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setName(item.name);
+    setDescription(item.description);
+    setPrice(String(item.price));
+    setCalories(item.calories != null ? String(item.calories) : "");
+  }, [item.id, item.name, item.description, item.price, item.calories]);
 
   return (
     <div
@@ -851,7 +995,11 @@ function ItemRow({
             value={name}
             placeholder="Item name"
             onChange={(e) => setName(e.target.value)}
-            onBlur={() => name !== item.name && onSave({ name: name.trim() || "Item" })}
+            onBlur={() => {
+              const trimmed = name.trim() || "Item";
+              setName(trimmed);
+              if (trimmed !== item.name) onChange({ name: trimmed });
+            }}
           />
           <div className="relative w-24 shrink-0">
             <input
@@ -863,7 +1011,7 @@ function ItemRow({
                 const parsed = parseFloat(price.replace(",", "."));
                 const value = Number.isFinite(parsed) ? Math.max(0, parsed) : item.price;
                 setPrice(String(value));
-                if (value !== item.price) onSave({ price: value });
+                if (value !== item.price) onChange({ price: value });
               }}
               aria-label={`Price (${currency})`}
             />
@@ -879,7 +1027,7 @@ function ItemRow({
                 const parsed = parseInt(calories, 10);
                 const value = Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
                 setCalories(value != null ? String(value) : "");
-                if (value !== (item.calories ?? null)) onSave({ calories: value });
+                if (value !== (item.calories ?? null)) onChange({ calories: value });
               }}
               aria-label="Calories per serving"
               title="Calories per serving (optional)"
@@ -891,7 +1039,9 @@ function ItemRow({
           value={description}
           placeholder="Description (optional)"
           onChange={(e) => setDescription(e.target.value)}
-          onBlur={() => description !== item.description && onSave({ description })}
+          onBlur={() => {
+            if (description !== item.description) onChange({ description });
+          }}
         />
         <div className="flex flex-wrap gap-1 pt-0.5">
           {DIETARY_TAGS.map((tag) => {
@@ -903,7 +1053,7 @@ function ItemRow({
                 type="button"
                 title={tag.label}
                 onClick={() =>
-                  onSave({
+                  onChange({
                     tags: active
                       ? (item.tags ?? []).filter((t) => t !== tag.id)
                       : [...(item.tags ?? []), tag.id],
@@ -926,12 +1076,12 @@ function ItemRow({
         <Toggle
           label=""
           checked={item.available}
-          onChange={(v) => onSave({ available: v })}
+          onChange={(v) => onChange({ available: v })}
         />
         <div className="flex">
           <button
             className={`btn-ghost px-1.5 py-1 ${item.featured ? "text-amber hover:text-amber" : ""}`}
-            onClick={() => onSave({ featured: !item.featured })}
+            onClick={() => onChange({ featured: !item.featured })}
             title={item.featured ? "Remove from featured" : "Feature this item"}
           >
             <Star size={14} className={item.featured ? "fill-amber" : ""} />

@@ -15,8 +15,8 @@ interface AuditRow {
 
 // human-friendly labels for known actions; unknown ones fall back to the raw key
 const ACTION_LABELS: Record<string, string> = {
-  suspend_tenant: "Suspended tenant",
-  unsuspend_tenant: "Unsuspended tenant",
+  suspend_tenant: "Suspended restaurant",
+  unsuspend_tenant: "Unsuspended restaurant",
   extend_trial: "Extended trial",
   add_admin: "Added admin",
   remove_admin: "Removed admin",

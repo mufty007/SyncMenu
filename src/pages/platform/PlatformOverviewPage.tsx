@@ -98,7 +98,7 @@ export default function PlatformOverviewPage() {
               className="card flex items-center justify-between p-5 transition-shadow hover:shadow-md"
             >
               <div>
-                <p className="font-medium">Manage tenants</p>
+                <p className="font-medium">Manage restaurants</p>
                 <p className="mt-0.5 text-sm text-smoke">
                   Search accounts, extend trials, suspend abuse.
                 </p>

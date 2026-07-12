@@ -112,7 +112,7 @@ export default function TenantDetailPage() {
       setMessage(error.message);
       return;
     }
-    setMessage("Tenant updated.");
+    setMessage("Restaurant updated.");
     void load();
   }
 
@@ -147,7 +147,7 @@ export default function TenantDetailPage() {
     return (
       <div>
         <Link to="/platform/tenants" className="btn-ghost -ml-3">
-          <ArrowLeft size={16} /> All tenants
+          <ArrowLeft size={16} /> All restaurants
         </Link>
         <div className="mt-6 h-40 animate-pulse rounded-2xl bg-mist/40" />
       </div>
@@ -182,7 +182,7 @@ export default function TenantDetailPage() {
   return (
     <div>
       <Link to="/platform/tenants" className="btn-ghost -ml-3">
-        <ArrowLeft size={16} /> All tenants
+        <ArrowLeft size={16} /> All restaurants
       </Link>
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -229,7 +229,7 @@ export default function TenantDetailPage() {
         </div>
 
         <div className="card p-6">
-          <h2 className="font-semibold">Edit tenant</h2>
+          <h2 className="font-semibold">Edit restaurant</h2>
           <div className="mt-4 space-y-3">
             <div>
               <label className="label">Restaurant name</label>
@@ -273,7 +273,7 @@ export default function TenantDetailPage() {
               </div>
             </div>
             <button className="btn-primary" disabled={busy} onClick={() => void saveTenant()}>
-              <Save size={16} /> Save tenant
+              <Save size={16} /> Save restaurant
             </button>
           </div>
 

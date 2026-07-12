@@ -53,7 +53,7 @@ export default function TenantsPage() {
   return (
     <div>
       <PageHeader
-        title="Tenants"
+        title="Restaurants"
         subtitle={`${total} restaurant${total === 1 ? "" : "s"} on the platform.`}
       />
 
@@ -94,7 +94,7 @@ export default function TenantsPage() {
                   <td colSpan={6}>
                     <EmptyState
                       icon={Building2}
-                      title={debounced ? "No matches" : "No tenants yet"}
+                      title={debounced ? "No matches" : "No restaurants yet"}
                       hint={
                         debounced
                           ? "Try a different name or email."
