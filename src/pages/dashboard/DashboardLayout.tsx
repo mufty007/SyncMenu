@@ -105,7 +105,7 @@ export default function DashboardLayout() {
       {/* Desktop: collapsible sidebar */}
       <div className="hidden lg:flex">
         <aside
-          className={`sticky top-0 flex h-screen shrink-0 flex-col overflow-hidden border-r border-mist bg-white transition-[width] duration-200 ${
+          className={`sticky top-0 flex h-dvh max-h-dvh shrink-0 flex-col overflow-hidden border-r border-mist bg-white transition-[width] duration-200 ${
             collapsed ? "w-[68px] p-3" : "w-60 p-4"
           }`}
         >
@@ -124,7 +124,7 @@ export default function DashboardLayout() {
             </button>
           </div>
 
-          <nav className="mt-4 flex flex-1 flex-col gap-1">
+          <nav className="mt-4 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
             {NAV.map(({ to, label, icon: Icon }) => (
               <NavLink
                 key={to}
@@ -147,7 +147,7 @@ export default function DashboardLayout() {
             ))}
           </nav>
 
-          <div className="border-t border-mist pt-3">
+          <div className="shrink-0 border-t border-mist pt-3">
             {!collapsed ? (
               footer
             ) : (

@@ -105,17 +105,17 @@ export default function AppShell({
         />
       )}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[min(100vw-3rem,17rem)] flex-col border-r p-4 transition-transform duration-200 lg:static lg:z-auto lg:translate-x-0 lg:shrink-0 ${asideBg} ${sidebarClassName} ${
+        className={`fixed inset-y-0 left-0 z-50 flex h-dvh max-h-dvh w-[min(100vw-3rem,17rem)] flex-col overflow-hidden border-r p-4 transition-transform duration-200 lg:sticky lg:inset-auto lg:left-auto lg:top-0 lg:z-auto lg:shrink-0 lg:translate-x-0 ${asideBg} ${sidebarClassName} ${
           drawerOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
-        <div className="mb-4">{brand}</div>
-        <nav className="mt-2 flex flex-1 flex-col gap-1 overflow-y-auto lg:mt-6">
+        <div className="mb-4 shrink-0">{brand}</div>
+        <nav className="mt-2 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto lg:mt-6">
           {nav.map((item) => (
             <ShellLink key={item.to} item={item} dark={dark} onNavigate={close} />
           ))}
         </nav>
-        <div className={`border-t pt-3 ${dark ? "border-white/10" : "border-mist"}`}>
+        <div className={`shrink-0 border-t pt-3 ${dark ? "border-white/10" : "border-mist"}`}>
           {footer}
         </div>
       </aside>
