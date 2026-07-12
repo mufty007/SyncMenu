@@ -1,12 +1,15 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
+  ArrowRight,
   Check,
   CheckCircle2,
   ListVideo,
   MonitorPlay,
   Palette,
   QrCode,
+  RefreshCw,
+  Store,
   WifiOff,
   X,
   Zap,
@@ -26,16 +29,45 @@ import type { TemplateId } from "../lib/types";
 
 const OLD_WAY = [
   "Redesign the menu file every time a price changes",
-  "Export it, find the USB stick, walk it to the TV",
-  "Repeat for every screen — and every mistake",
-  "So the menu just… stays outdated",
+  "Update Clover inventory separately from your TVs",
+  "Log into Uber Eats and DoorDash to fix the same item again",
+  "So something's always wrong somewhere",
 ];
 
 const NEW_WAY = [
   "Change the price on your phone or laptop",
   "Every screen updates in seconds — automatically",
-  "Templates keep it looking professional",
-  "86'd an item? Toggle it off. Done.",
+  "Connected to Clover? Delivery apps follow too",
+  "86'd an item? Toggle it off. Done everywhere.",
+];
+
+const CLOVER_FLOW = [
+  {
+    label: "You edit once",
+    detail: "Prices, items, sold-outs — all in SyncMenu",
+    accent: "bg-brand/10 text-brand",
+  },
+  {
+    label: "TVs update live",
+    detail: "Every menu board in your shop, instantly",
+    accent: "bg-live/10 text-live",
+  },
+  {
+    label: "Clover gets the push",
+    detail: "Your POS menu stays matched",
+    accent: "bg-amber/15 text-amber",
+  },
+  {
+    label: "Delivery apps follow",
+    detail: "Uber Eats, DoorDash & Grubhub when linked in Clover",
+    accent: "bg-ink/5 text-ink",
+  },
+];
+
+const DELIVERY_APPS = [
+  { name: "Uber Eats", color: "#06C167" },
+  { name: "DoorDash", color: "#FF3008" },
+  { name: "Grubhub", color: "#F63440" },
 ];
 
 const FEATURES = [
@@ -43,6 +75,11 @@ const FEATURES = [
     icon: Zap,
     title: "Instant sync",
     body: "Change a price. It's on your screens in seconds. No USB sticks, no exports, no walking over to the TV.",
+  },
+  {
+    icon: RefreshCw,
+    title: "Clover + delivery sync",
+    body: "Connect Clover and push menu changes from one place. Uber Eats, DoorDash, and Grubhub stay updated when they're linked through your Clover account.",
   },
   {
     icon: MonitorPlay,
@@ -84,8 +121,13 @@ const STEPS = [
   },
   {
     n: "3",
+    title: "Connect Clover (optional)",
+    body: "Already on Clover? Link your account and pick your delivery menu. Push once — POS and delivery apps follow.",
+  },
+  {
+    n: "4",
     title: "Stay in sync",
-    body: "Every edit goes live everywhere, instantly. Sold out? Price change? Two taps.",
+    body: "Every edit goes live on screens, Clover, and delivery — instantly. Sold out? Price change? Two taps.",
   },
 ];
 
@@ -126,6 +168,10 @@ const FAQS = [
   {
     q: "How long does setup take?",
     a: "Most owners go from signup to a live menu on their TV in under 15 minutes. No designer, no IT person, no installer.",
+  },
+  {
+    q: "I use Clover for POS and delivery. Does SyncMenu work with that?",
+    a: "Yes. Connect your Clover account and choose which menu syncs to delivery. Edits in SyncMenu push to Clover — and if you've linked Uber Eats, DoorDash, or Grubhub inside Clover, those menus update too. Your TVs can show the same menu or a different one.",
   },
 ];
 
@@ -215,16 +261,18 @@ export default function Landing() {
         <Reveal>
           <span className="inline-flex items-center gap-2 rounded-full border border-mist bg-cloud px-4 py-1.5 text-xs font-medium text-smoke">
             <span className="h-1.5 w-1.5 rounded-full bg-live" />
-            Digital menu boards for independent restaurants
+            Menu boards + Clover delivery sync
           </span>
-          <h1 className="font-display mx-auto mt-6 max-w-3xl text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl md:text-7xl">
-            Your menu. Every screen.{" "}
-            <span className="text-brand">Always in sync.</span>
+          <h1 className="font-display mx-auto mt-6 max-w-4xl text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl md:text-7xl">
+            One menu.{" "}
+            <span className="text-brand">Every screen.</span>{" "}
+            Every delivery app.
           </h1>
-          <p className="mx-auto mt-6 max-w-xl text-lg text-smoke">
-            Ditch the USB stick. Manage your menu from your phone and it's live
-            on every TV in your shop — in seconds, looking like you hired a
-            designer.
+          <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-smoke">
+            Update your menu once from your phone — it's live on every TV in your
+            shop, pushed to Clover, and synced to Uber Eats, DoorDash, and Grubhub
+            when they're connected through Clover. No USB sticks. No triple
+            updates. No outdated prices at rush hour.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link to="/signup" className="btn-primary px-7 py-3 text-base">
@@ -267,16 +315,91 @@ export default function Landing() {
         </Reveal>
       </section>
 
+      {/* clover + delivery sync */}
+      <section id="clover" className="scroll-mt-20 border-y border-mist bg-cloud py-20">
+        <div className="mx-auto max-w-6xl px-6">
+          <Reveal>
+            <div className="mx-auto max-w-3xl text-center">
+              <span className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-brand">
+                <Store size={14} />
+                Clover integration
+              </span>
+              <h2 className="font-display mt-5 text-3xl font-bold md:text-4xl">
+                Stop updating the same menu three times
+              </h2>
+              <p className="mt-4 text-lg leading-relaxed text-smoke">
+                Most shops run menu boards on TVs, a POS in Clover, and delivery
+                on Uber Eats or DoorDash. SyncMenu ties them together — edit once,
+                and everything stays matched.
+              </p>
+            </div>
+          </Reveal>
+
+          <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {CLOVER_FLOW.map((step, i) => (
+              <Reveal key={step.label} delay={i * 80}>
+                <div className="card lift relative h-full p-6">
+                  {i < CLOVER_FLOW.length - 1 && (
+                    <ArrowRight
+                      size={18}
+                      className="absolute -right-3 top-1/2 z-10 hidden -translate-y-1/2 text-smoke/40 lg:block"
+                      aria-hidden
+                    />
+                  )}
+                  <span
+                    className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${step.accent}`}
+                  >
+                    Step {i + 1}
+                  </span>
+                  <h3 className="mt-4 font-semibold">{step.label}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-smoke">{step.detail}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+
+          <Reveal delay={200}>
+            <div className="card mx-auto mt-10 max-w-3xl p-8 text-center">
+              <p className="text-sm font-medium text-smoke">
+                When these are connected inside Clover, they sync from SyncMenu too
+              </p>
+              <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+                {DELIVERY_APPS.map((app) => (
+                  <span
+                    key={app.name}
+                    className="inline-flex items-center gap-2 rounded-full border border-mist bg-white px-4 py-2 text-sm font-medium"
+                  >
+                    <span
+                      className="h-2.5 w-2.5 rounded-full"
+                      style={{ backgroundColor: app.color }}
+                    />
+                    {app.name}
+                  </span>
+                ))}
+              </div>
+              <p className="mt-6 text-sm leading-relaxed text-smoke">
+                Wings on special? 86 the coleslaw? Change it in SyncMenu — your TVs
+                flip instantly, Clover gets the update, and delivery menus follow.
+                One source of truth. Finally.
+              </p>
+              <Link to="/signup" className="btn-primary mt-6 inline-flex px-6 py-3">
+                Try it with your menu
+              </Link>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
       {/* old way vs new way */}
       <section className="bg-cloud py-20">
         <div className="mx-auto max-w-6xl px-6">
           <Reveal>
             <h2 className="font-display text-center text-3xl font-bold md:text-4xl">
-              Still updating menus with a USB stick?
+              Still updating menus in three different places?
             </h2>
-            <p className="mx-auto mt-3 max-w-lg text-center text-smoke">
-              Every price change shouldn't be a design project. Here's the
-              difference:
+            <p className="mx-auto mt-3 max-w-xl text-center text-smoke">
+              The TV file, the Clover inventory, the DoorDash listing — they
+              shouldn't be three separate jobs. Here's the difference:
             </p>
           </Reveal>
           <div className="mt-12 grid gap-6 md:grid-cols-2">
@@ -318,8 +441,12 @@ export default function Landing() {
       <section id="features" className="mx-auto max-w-6xl scroll-mt-20 px-6 py-20">
         <Reveal>
           <h2 className="font-display text-center text-3xl font-bold md:text-4xl">
-            Everything a busy shop needs. Nothing it doesn't.
+            Everything a busy shop needs — boards, Clover, delivery
           </h2>
+          <p className="mx-auto mt-3 max-w-xl text-center text-smoke">
+            Built for chicken shops, sandwich counters, and takeaways that run
+            hard. Professional menus without a designer or an IT person.
+          </p>
         </Reveal>
         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map(({ icon: Icon, title, body }, i) => (
@@ -377,7 +504,7 @@ export default function Landing() {
             Live on your TV in minutes
           </h2>
         </Reveal>
-        <div className="mt-12 grid gap-8 md:grid-cols-3">
+        <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {STEPS.map((s, i) => (
             <Reveal key={s.n} delay={i * 120}>
               <div className="text-center">
@@ -527,11 +654,11 @@ export default function Landing() {
             style={{ background: "linear-gradient(120deg, #FF6B2C 0%, #E4501A 100%)" }}
           >
             <h2 className="font-display text-3xl font-bold md:text-4xl">
-              Put your menu in sync tonight.
+              Your menu, finally in one place.
             </h2>
-            <p className="mx-auto mt-3 max-w-md text-white/85">
-              Sign up, build your menu, pair your TV. If it's not live before
-              close, we'd be surprised.
+            <p className="mx-auto mt-3 max-w-lg text-white/85">
+              TVs live tonight. Clover connected in minutes. Delivery apps that
+              follow when you're ready. Start free — no credit card.
             </p>
             <Link
               to="/signup"

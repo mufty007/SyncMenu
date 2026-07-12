@@ -5,6 +5,7 @@ import Logo from "./Logo";
 
 const MOBILE_LINKS = [
   { to: "/#features", label: "Features" },
+  { to: "/#clover", label: "Clover sync" },
   { to: "/#pricing", label: "Pricing" },
   { to: "/contact", label: "Contact" },
 ];
@@ -22,6 +23,9 @@ export function SiteHeader() {
         <nav className="hidden items-center gap-1 sm:flex sm:gap-2">
           <Link to="/#features" className="btn-ghost">
             Features
+          </Link>
+          <Link to="/#clover" className="btn-ghost">
+            Clover sync
           </Link>
           <Link to="/#pricing" className="btn-ghost">
             Pricing
