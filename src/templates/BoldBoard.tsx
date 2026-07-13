@@ -9,12 +9,13 @@ import {
   headingFont,
   type InnerProps,
 } from "./shared";
+import AutoScrollPane from "./AutoScrollPane";
 
 /**
  * Bold Board — fast-food energy. Bebas Neue condensed display, accent
  * header band, section cards with a thick accent spine, big prices.
  */
-export default function BoldBoard({ data, cfg, orientation, sections }: InnerProps) {
+export default function BoldBoard({ data, cfg, orientation, sections, autoScroll }: InnerProps) {
   const dark = cfg.theme === "dark";
   const bg = boardBg(cfg, dark ? "#12181F" : "#F2F4F7");
   const hFont = headingFont(cfg, FONTS.condensed);
@@ -77,7 +78,8 @@ export default function BoldBoard({ data, cfg, orientation, sections }: InnerPro
         </div>
       </header>
 
-      <div
+      <AutoScrollPane
+        enabled={autoScroll}
         style={{
           flex: 1,
           padding: orientation === "portrait" ? 48 : 56,
@@ -85,7 +87,6 @@ export default function BoldBoard({ data, cfg, orientation, sections }: InnerPro
           gridTemplateColumns: `repeat(${columns}, 1fr)`,
           gap: 36,
           alignContent: "start",
-          overflow: "hidden",
         }}
       >
         {sections.map((section) => (
@@ -146,7 +147,7 @@ export default function BoldBoard({ data, cfg, orientation, sections }: InnerPro
             ))}
           </section>
         ))}
-      </div>
+      </AutoScrollPane>
     </div>
   );
 }

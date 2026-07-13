@@ -17,7 +17,7 @@ const DEFAULT_ZONE_COLORS = ["#E5484D", "#3B82F6", "#14B8A6", "#F59E0B"];
  * Vivid Zones — color-blocked category zones in a 2×2 grid (landscape)
  * or stacked columns (portrait). Each zone maps to a menu section.
  */
-export default function VividBoard({ data, cfg, orientation, sections }: InnerProps) {
+export default function VividBoard({ data, cfg, orientation, sections, autoScroll }: InnerProps) {
   const portrait = orientation === "portrait";
   const hFont = headingFont(cfg, FONTS.condensed);
   const zoneColors = cfg.zoneColors?.length ? cfg.zoneColors : DEFAULT_ZONE_COLORS;
@@ -80,6 +80,7 @@ export default function VividBoard({ data, cfg, orientation, sections }: InnerPr
             accent={zoneColors[idx % zoneColors.length] ?? cfg.accent}
             title={section.name}
             dark={idx % 2 === 0}
+            autoScroll={autoScroll}
           >
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {section.items.slice(0, portrait ? 5 : 6).map((item) => (

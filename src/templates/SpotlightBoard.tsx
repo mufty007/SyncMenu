@@ -11,12 +11,13 @@ import {
   type InnerProps,
 } from "./shared";
 import { HeroPanel, SplitLayout } from "./primitives";
+import AutoScrollPane from "./AutoScrollPane";
 
 /**
  * Spotlight — split hero + catalog. Left panel showcases a featured item;
  * right side shows categorized grid with thumbnails.
  */
-export default function SpotlightBoard({ data, cfg, orientation, sections }: InnerProps) {
+export default function SpotlightBoard({ data, cfg, orientation, sections, autoScroll }: InnerProps) {
   const portrait = orientation === "portrait";
   const hero = resolveHeroItem(sections, cfg);
   const catalog = catalogSections(sections, hero);
@@ -84,7 +85,7 @@ export default function SpotlightBoard({ data, cfg, orientation, sections }: Inn
           </div>
         </div>
       </header>
-      <div style={{ flex: 1, overflow: "hidden" }}>
+      <AutoScrollPane enabled={autoScroll} style={{ flex: 1 }}>
         {catalog.map((section) => (
           <section key={section.id} style={{ marginBottom: 28 }}>
             <h2
@@ -113,7 +114,7 @@ export default function SpotlightBoard({ data, cfg, orientation, sections }: Inn
             </div>
           </section>
         ))}
-      </div>
+      </AutoScrollPane>
     </div>
   );
 

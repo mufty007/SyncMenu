@@ -152,6 +152,25 @@ body {
   }
 }
 
+/* Auto-scroll for overflowing menu boards (signage player) */
+@keyframes sm-board-scroll {
+  0% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(calc(-1 * var(--scroll-distance)));
+  }
+  50% {
+    transform: translateY(calc(-1 * var(--scroll-distance)));
+  }
+  51% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
 /* Signature sync pulse */
 @keyframes sync-pulse {
   0% {

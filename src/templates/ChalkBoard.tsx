@@ -10,6 +10,7 @@ import {
   headingFont,
   type InnerProps,
 } from "./shared";
+import AutoScrollPane from "./AutoScrollPane";
 
 function Squiggle({ color }: { color: string }) {
   return (
@@ -29,7 +30,7 @@ function Squiggle({ color }: { color: string }) {
  * Chalkboard — hand-shop charm. Grainy slate board, chalk-white frame,
  * Caveat handwriting for headings and prices.
  */
-export default function ChalkBoard({ data, cfg, orientation, sections }: InnerProps) {
+export default function ChalkBoard({ data, cfg, orientation, sections, autoScroll }: InnerProps) {
   const columns = columnsFor(orientation, sections.length, cfg.columns);
   const chalk = "#F2F4F6";
   const faint = "rgba(242,244,246,0.55)";
@@ -115,7 +116,7 @@ export default function ChalkBoard({ data, cfg, orientation, sections }: InnerPr
           </div>
         </header>
 
-        <div style={{ flex: 1, columnCount: columns, columnGap: 84, overflow: "hidden" }}>
+        <AutoScrollPane enabled={autoScroll} style={{ flex: 1, columnCount: columns, columnGap: 84 }}>
           {sections.map((section) => (
             <section key={section.id} style={{ breakInside: "avoid", marginBottom: 50 }}>
               <h2
@@ -181,7 +182,7 @@ export default function ChalkBoard({ data, cfg, orientation, sections }: InnerPr
               ))}
             </section>
           ))}
-        </div>
+        </AutoScrollPane>
       </div>
     </div>
   );

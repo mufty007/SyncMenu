@@ -9,12 +9,13 @@ import {
   headingFont,
   type InnerProps,
 } from "./shared";
+import AutoScrollPane from "./AutoScrollPane";
 
 /**
  * Classic — editorial café board. Cream paper, Fraunces serif display,
  * hairline rules, dotted price leaders. Quietly upscale.
  */
-export default function ClassicBoard({ data, cfg, orientation, sections }: InnerProps) {
+export default function ClassicBoard({ data, cfg, orientation, sections, autoScroll }: InnerProps) {
   const dark = cfg.theme === "dark";
   const bg = boardBg(cfg, dark ? "#181F26" : "#FFFDF8");
   const hFont = headingFont(cfg, FONTS.serif);
@@ -85,7 +86,7 @@ export default function ClassicBoard({ data, cfg, orientation, sections }: Inner
         />
       </header>
 
-      <div style={{ flex: 1, columnCount: columns, columnGap: 88, overflow: "hidden" }}>
+      <AutoScrollPane enabled={autoScroll} style={{ flex: 1, columnCount: columns, columnGap: 88 }}>
         {sections.map((section) => (
           <section key={section.id} style={{ breakInside: "avoid", marginBottom: 54 }}>
             <h2
@@ -159,7 +160,7 @@ export default function ClassicBoard({ data, cfg, orientation, sections }: Inner
             ))}
           </section>
         ))}
-      </div>
+      </AutoScrollPane>
     </div>
   );
 }

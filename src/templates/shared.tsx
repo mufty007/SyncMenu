@@ -26,6 +26,8 @@ export interface InnerProps {
   cfg: TemplateConfig;
   orientation: Orientation;
   sections: (MenuSection & { items: MenuItem[] })[];
+  /** Enable looping vertical scroll when content overflows (signage player). */
+  autoScroll?: boolean;
 }
 
 /** Sorted sections with only available items; empty sections dropped. */

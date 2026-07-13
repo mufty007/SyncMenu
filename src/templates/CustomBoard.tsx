@@ -10,6 +10,7 @@ import {
   headingFont,
   type InnerProps,
 } from "./shared";
+import AutoScrollPane from "./AutoScrollPane";
 
 export function resolveCustomDesign(custom?: Partial<CustomDesign>): CustomDesign {
   return {
@@ -23,7 +24,7 @@ export function resolveCustomDesign(custom?: Partial<CustomDesign>): CustomDesig
  * Your Design — the studio template. Every layout choice, font and color
  * comes from the user's design settings; content always reflows safely.
  */
-export default function CustomBoard({ data, cfg, orientation, sections }: InnerProps) {
+export default function CustomBoard({ data, cfg, orientation, sections, autoScroll }: InnerProps) {
   const d = resolveCustomDesign(cfg.custom);
   const bodyFont = d.bodyFont === "grotesk" ? FONTS.grotesk : FONTS.body;
   const hFont = headingFont(cfg, FONTS.grotesk);
@@ -113,13 +114,13 @@ export default function CustomBoard({ data, cfg, orientation, sections }: InnerP
         )}
       </header>
 
-      <div
+      <AutoScrollPane
+        enabled={autoScroll}
         style={{
           flex: 1,
           padding: portrait ? "0 64px 64px" : "0 72px 56px",
           columnCount: columns,
           columnGap: 72,
-          overflow: "hidden",
         }}
       >
         {sections.map((section) => (
@@ -150,7 +151,7 @@ export default function CustomBoard({ data, cfg, orientation, sections }: InnerP
             ))}
           </section>
         ))}
-      </div>
+      </AutoScrollPane>
     </div>
   );
 }

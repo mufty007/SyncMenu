@@ -1,12 +1,13 @@
 import type { MenuItem } from "../lib/types";
 import { formatPrice } from "../lib/format";
 import { FONTS, FeaturedBadge, ItemExtras, boardBg, headingFont, type InnerProps } from "./shared";
+import AutoScrollPane from "./AutoScrollPane";
 
 /**
  * Fresh Market — image-forward card grid. Soft tinted background,
  * photo cards with price badges. Made for juice bars & sandwich spots.
  */
-export default function MarketBoard({ data, cfg, orientation, sections }: InnerProps) {
+export default function MarketBoard({ data, cfg, orientation, sections, autoScroll }: InnerProps) {
   const portrait = orientation === "portrait";
   const itemCols = portrait ? 2 : 4;
   const hFont = headingFont(cfg, FONTS.grotesk);
@@ -66,7 +67,7 @@ export default function MarketBoard({ data, cfg, orientation, sections }: InnerP
         </div>
       </header>
 
-      <div style={{ flex: 1, overflow: "hidden" }}>
+      <AutoScrollPane enabled={autoScroll} style={{ flex: 1 }}>
         {sections.map((section) => (
           <section key={section.id} style={{ marginBottom: 40 }}>
             <div
@@ -95,7 +96,7 @@ export default function MarketBoard({ data, cfg, orientation, sections }: InnerP
             </div>
           </section>
         ))}
-      </div>
+      </AutoScrollPane>
     </div>
   );
 }

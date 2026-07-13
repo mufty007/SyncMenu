@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
+import AutoScrollPane from "./AutoScrollPane";
 import { FONTS } from "./shared";
 
 export type LayoutRatio = "40-60" | "50-50" | "33-67";
@@ -265,10 +266,11 @@ interface CategoryZoneProps {
   title: string;
   children: ReactNode;
   dark?: boolean;
+  autoScroll?: boolean;
 }
 
 /** Color-blocked category zone with header band. */
-export function CategoryZone({ accent, title, children, dark }: CategoryZoneProps) {
+export function CategoryZone({ accent, title, children, dark, autoScroll }: CategoryZoneProps) {
   const bg = dark ? shade(accent, -45) : `${accent}12`;
   const band = dark ? accent : accent;
   const text = dark ? "#FFFFFF" : "#1F2933";
@@ -299,7 +301,9 @@ export function CategoryZone({ accent, title, children, dark }: CategoryZoneProp
       >
         {title}
       </div>
-      <div style={{ flex: 1, padding: "16px 20px", color: text, overflow: "hidden" }}>{children}</div>
+      <AutoScrollPane enabled={autoScroll} style={{ flex: 1, padding: "16px 20px", color: text }}>
+        {children}
+      </AutoScrollPane>
     </div>
   );
 }

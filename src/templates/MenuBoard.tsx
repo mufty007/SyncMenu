@@ -96,12 +96,14 @@ interface BoardProps {
   orientation: Orientation;
   /** High-priority decode for kiosk player backgrounds. */
   priority?: boolean;
+  /** Loop-scroll overflowing menu content (signage player). */
+  autoScroll?: boolean;
 }
 
 const DENSITY_SCALE = { cozy: 1.12, standard: 1, compact: 0.86 } as const;
 
 /** Renders a full menu board at native TV resolution (1920x1080 / 1080x1920). */
-export default function MenuBoard({ data, templateId, config, orientation, priority }: BoardProps) {
+export default function MenuBoard({ data, templateId, config, orientation, priority, autoScroll }: BoardProps) {
   const cfg: TemplateConfig = { ...DEFAULT_TEMPLATE_CONFIG, ...config };
   const { width, height } = boardDimensions(orientation);
   // Freeform studio designs win over the legacy preset-based custom board.
@@ -141,7 +143,13 @@ export default function MenuBoard({ data, templateId, config, orientation, prior
           </div>
         )}
         <div style={{ position: "relative", width: "100%", height: "100%" }}>
-          <Board data={data} cfg={cfg} orientation={orientation} sections={sections} />
+          <Board
+            data={data}
+            cfg={cfg}
+            orientation={orientation}
+            sections={sections}
+            autoScroll={autoScroll}
+          />
         </div>
       </div>
       {footer && (

@@ -446,6 +446,7 @@ function ContentView({
             config={slide.menu.template_config}
             orientation={orientation}
             priority
+            autoScroll
           />
         )}
       </div>

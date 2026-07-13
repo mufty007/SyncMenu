@@ -9,13 +9,14 @@ import {
   headingFont,
   type InnerProps,
 } from "./shared";
+import AutoScrollPane from "./AutoScrollPane";
 
 /**
  * Night Luxe — premium evening board. Near-black with a soft vignette,
  * Fraunces serif, hairline dividers, letterspaced small caps.
  * Accent reads best in gold/amber but follows the user's choice.
  */
-export default function LuxeBoard({ data, cfg, orientation, sections }: InnerProps) {
+export default function LuxeBoard({ data, cfg, orientation, sections, autoScroll }: InnerProps) {
   const cream = "#F3EDE3";
   const faint = "rgba(243,237,227,0.5)";
   const hairline = "rgba(243,237,227,0.14)";
@@ -89,14 +90,9 @@ export default function LuxeBoard({ data, cfg, orientation, sections }: InnerPro
         </div>
       </header>
 
-      <div
-        style={{
-          flex: 1,
-          columnCount: columns,
-          columnGap: 96,
-          columnRule: `1px solid ${hairline}`,
-          overflow: "hidden",
-        }}
+      <AutoScrollPane
+        enabled={autoScroll}
+        style={{ flex: 1, columnCount: columns, columnGap: 96, columnRule: `1px solid ${hairline}` }}
       >
         {sections.map((section) => (
           <section key={section.id} style={{ breakInside: "avoid", marginBottom: 56 }}>
@@ -163,7 +159,7 @@ export default function LuxeBoard({ data, cfg, orientation, sections }: InnerPro
             ))}
           </section>
         ))}
-      </div>
+      </AutoScrollPane>
     </div>
   );
 }

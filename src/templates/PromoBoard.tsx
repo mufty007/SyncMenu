@@ -10,12 +10,13 @@ import {
   type InnerProps,
 } from "./shared";
 import { DecorativeBlob } from "./primitives";
+import AutoScrollPane from "./AutoScrollPane";
 
 /**
  * Promo Hero — full-screen promotional layout with giant product photo,
  * display headline, price callout, and quick-list strip from a section.
  */
-export default function PromoBoard({ data, cfg, orientation, sections }: InnerProps) {
+export default function PromoBoard({ data, cfg, orientation, sections, autoScroll }: InnerProps) {
   const portrait = orientation === "portrait";
   const hero = resolveHeroItem(sections, cfg);
   const hFont = headingFont(cfg, FONTS.bricolage);
@@ -155,10 +156,10 @@ export default function PromoBoard({ data, cfg, orientation, sections }: InnerPr
             padding: portrait ? "28px 36px 36px" : "40px 44px",
             display: "flex",
             flexDirection: "column",
-            justifyContent: "center",
             position: "relative",
             zIndex: 1,
             overflow: "hidden",
+            minHeight: 0,
           }}
         >
           <div
@@ -173,11 +174,13 @@ export default function PromoBoard({ data, cfg, orientation, sections }: InnerPr
           >
             {quickSection?.name ?? "Also try"}
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {quickItems.map((item) => (
-              <QuickRow key={item.id} item={item} data={data} cfg={cfg} />
-            ))}
-          </div>
+          <AutoScrollPane enabled={autoScroll} style={{ flex: 1, minHeight: 0 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {quickItems.map((item) => (
+                <QuickRow key={item.id} item={item} data={data} cfg={cfg} />
+              ))}
+            </div>
+          </AutoScrollPane>
         </div>
       )}
     </div>
