@@ -396,6 +396,18 @@ export interface Subscription {
   updated_at: string;
 }
 
+export interface SubscriptionAddon {
+  restaurant_id: string;
+  addon_id: "clover";
+  stripe_subscription_id: string;
+  stripe_subscription_item_id: string;
+  price_id: string;
+  status: string;
+  current_period_end: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Plan {
   id: string;
   name: string;

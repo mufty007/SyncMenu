@@ -10,6 +10,11 @@ export interface PlanPricingConfig {
   annualMonthly: number;
 }
 
+export interface CloverConfig {
+  enabled: boolean;
+  pricing: PlanPricingConfig;
+}
+
 export interface PlatformConfig {
   trial_days: number;
   max_admins: number;
@@ -17,6 +22,7 @@ export interface PlatformConfig {
   site_url: string;
   plan_limits: Record<string, PlanLimitConfig>;
   pricing: Record<string, PlanPricingConfig>;
+  clover: CloverConfig;
 }
 
 export const DEFAULT_PLATFORM_CONFIG: PlatformConfig = {
@@ -35,6 +41,10 @@ export const DEFAULT_PLATFORM_CONFIG: PlatformConfig = {
     growth: { monthly: 30, annualMonthly: 25 },
     pro: { monthly: 99, annualMonthly: 82 },
   },
+  clover: {
+    enabled: false,
+    pricing: { monthly: 20, annualMonthly: 16 },
+  },
 };
 
 export function mergePlatformConfig(raw: unknown): PlatformConfig {
@@ -51,6 +61,13 @@ export function mergePlatformConfig(raw: unknown): PlatformConfig {
     pricing: {
       ...DEFAULT_PLATFORM_CONFIG.pricing,
       ...(data.pricing ?? {}),
+    },
+    clover: {
+      enabled: data.clover?.enabled ?? DEFAULT_PLATFORM_CONFIG.clover.enabled,
+      pricing: {
+        ...DEFAULT_PLATFORM_CONFIG.clover.pricing,
+        ...(data.clover?.pricing ?? {}),
+      },
     },
   };
 }

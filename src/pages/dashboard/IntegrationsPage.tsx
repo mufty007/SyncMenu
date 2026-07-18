@@ -8,6 +8,8 @@ import type { Menu } from "../../lib/types";
 interface CloverIntegration {
   status: string;
   feature_enabled: boolean;
+  entitled: boolean;
+  available: boolean;
   clover_merchant_id?: string;
   delivery_menu_id?: string | null;
   last_full_sync_at?: string | null;
@@ -128,6 +130,8 @@ export default function IntegrationsPage() {
   if (loading) return <p className="text-sm text-smoke">Loading…</p>;
 
   const featureEnabled = integration?.feature_enabled ?? false;
+  const entitled = integration?.entitled ?? false;
+  const available = integration?.available ?? false;
   const connected = integration?.connected ?? false;
 
   return (
@@ -148,7 +152,27 @@ export default function IntegrationsPage() {
         </div>
       )}
 
-      {featureEnabled && (
+      {featureEnabled && !entitled && (
+        <div className="card mt-8 p-6">
+          <div className="flex items-start gap-3">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
+              <Plug size={20} />
+            </div>
+            <div>
+              <h2 className="font-semibold">Clover POS</h2>
+              <p className="mt-1 text-pretty text-sm text-smoke">
+                Clover delivery sync is a paid add-on. Add it to your SyncMenu
+                subscription before connecting a merchant account.
+              </p>
+              <Link to="/app/billing" className="btn-primary mt-4">
+                View Clover add-on
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {available && (
         <div className="card mt-8 p-6">
           <div className="flex items-start gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand/10 text-brand">

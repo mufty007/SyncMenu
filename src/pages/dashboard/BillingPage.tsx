@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Check, ExternalLink } from "lucide-react";
+import { Check, ExternalLink, Plug } from "lucide-react";
 import BillingIntervalToggle from "../../components/BillingIntervalToggle";
 import { supabase } from "../../lib/supabase";
 import {
@@ -11,16 +11,20 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { trialDaysLeft } from "../../lib/format";
 import { usePlatformSettings } from "../../lib/usePlatformSettings";
-import type { Subscription } from "../../lib/types";
+import type { Subscription, SubscriptionAddon } from "../../lib/types";
 
 export default function BillingPage() {
   const { restaurant } = useAuth();
-  const { plans } = usePlatformSettings();
+  const { config, plans } = usePlatformSettings();
   const [params, setParams] = useSearchParams();
   const [sub, setSub] = useState<Subscription | null>(null);
+  const [cloverAddon, setCloverAddon] = useState<SubscriptionAddon | null>(null);
   const [loaded, setLoaded] = useState(false);
   const billingFromUrl = parseBillingParams(params);
   const [interval, setInterval_] = useState<BillingInterval>(billingFromUrl.interval);
+  const [includeClover, setIncludeClover] = useState(
+    billingFromUrl.addon === "clover"
+  );
   const [busyPlan, setBusyPlan] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const autoCheckoutStarted = useRef(false);
@@ -32,26 +36,44 @@ export default function BillingPage() {
     setInterval_(billingFromUrl.interval);
   }, [billingFromUrl.interval]);
 
-  useEffect(() => {
+  async function loadBillingState() {
     if (!restaurant) return;
-    supabase
-      .from("subscriptions")
-      .select("*")
-      .eq("restaurant_id", restaurant.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        setSub((data as Subscription) ?? null);
-        setLoaded(true);
-      });
+    const [{ data: subscription }, { data: addons }] = await Promise.all([
+      supabase
+        .from("subscriptions")
+        .select("*")
+        .eq("restaurant_id", restaurant.id)
+        .maybeSingle(),
+      supabase
+        .from("subscription_addons")
+        .select("*")
+        .eq("restaurant_id", restaurant.id)
+        .eq("addon_id", "clover")
+        .maybeSingle(),
+    ]);
+    setSub((subscription as Subscription) ?? null);
+    setCloverAddon((addons as SubscriptionAddon) ?? null);
+    setLoaded(true);
+  }
+
+  useEffect(() => {
+    void loadBillingState();
   }, [restaurant, justSucceeded]);
 
   const active = sub?.status === "active" || sub?.status === "trialing";
+  const cloverActive =
+    cloverAddon?.status === "active" || cloverAddon?.status === "trialing";
 
-  async function subscribe(plan: string) {
+  async function subscribe(plan: string, withClover = includeClover) {
     setBusyPlan(plan);
     setError(null);
     const { data, error: err } = await supabase.functions.invoke("create-checkout-session", {
-      body: { plan, interval, origin: window.location.origin },
+      body: {
+        plan,
+        interval,
+        origin: window.location.origin,
+        addons: withClover ? ["clover"] : [],
+      },
     });
     setBusyPlan(null);
     if (err || !data?.url) {
@@ -73,8 +95,20 @@ export default function BillingPage() {
     const next = new URLSearchParams(params);
     next.delete("checkout");
     setParams(next, { replace: true });
-    void subscribe(billingFromUrl.plan);
-  }, [loaded, active, billingFromUrl.checkout, billingFromUrl.plan, params, setParams, interval]);
+    void subscribe(
+      billingFromUrl.plan,
+      billingFromUrl.addon === "clover"
+    );
+  }, [
+    loaded,
+    active,
+    billingFromUrl.checkout,
+    billingFromUrl.plan,
+    billingFromUrl.addon,
+    params,
+    setParams,
+    interval,
+  ]);
 
   function handleIntervalChange(next: BillingInterval) {
     setInterval_(next);
@@ -95,6 +129,32 @@ export default function BillingPage() {
       return;
     }
     window.location.href = data.url as string;
+  }
+
+  async function manageClover(action: "add" | "remove") {
+    if (
+      action === "remove" &&
+      !window.confirm(
+        "Remove Clover delivery sync? Existing Clover connections will stop syncing."
+      )
+    ) {
+      return;
+    }
+    setBusyPlan("clover");
+    setError(null);
+    const { data, error: err } = await supabase.functions.invoke(
+      "manage-clover-addon",
+      { body: { action } }
+    );
+    setBusyPlan(null);
+    if (err || !data?.ok) {
+      setError(
+        (data as { error?: string } | null)?.error ??
+          "Couldn't update the Clover add-on."
+      );
+      return;
+    }
+    await loadBillingState();
   }
 
   return (
@@ -149,7 +209,37 @@ export default function BillingPage() {
       </div>
 
       {!active && loaded && (
-        <BillingIntervalToggle value={interval} onChange={handleIntervalChange} className="mt-6" />
+        <>
+          <BillingIntervalToggle value={interval} onChange={handleIntervalChange} className="mt-6" />
+          <label className="card mt-6 flex cursor-pointer items-start gap-4 p-5">
+            <input
+              type="checkbox"
+              checked={includeClover}
+              disabled={!config.clover.enabled}
+              onChange={(event) => setIncludeClover(event.target.checked)}
+              className="mt-1 size-4 rounded border-mist text-brand"
+            />
+            <span className="flex-1">
+              <span className="flex flex-wrap items-center justify-between gap-2">
+                <span className="flex items-center gap-2 font-semibold">
+                  <Plug size={17} className="text-brand" />
+                  Add Clover delivery sync
+                </span>
+                <span className="tabular-nums">
+                  +$
+                  {interval === "yearly"
+                    ? config.clover.pricing.annualMonthly
+                    : config.clover.pricing.monthly}
+                  /month
+                </span>
+              </span>
+              <span className="mt-1 block text-pretty text-sm text-smoke">
+                Push one delivery menu to Clover inventory and connected delivery apps.
+                {!config.clover.enabled && " Currently unavailable."}
+              </span>
+            </span>
+          </label>
+        </>
       )}
 
       {error && <p className="mt-4 text-sm text-alert">{error}</p>}
@@ -216,6 +306,42 @@ export default function BillingPage() {
           );
         })}
       </div>
+
+      {active && (
+        <section className="card mt-6 p-6">
+          <div className="flex flex-wrap items-start justify-between gap-5">
+            <div className="flex items-start gap-3">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
+                <Plug size={19} />
+              </div>
+              <div>
+                <h2 className="font-semibold">Clover delivery sync</h2>
+                <p className="mt-1 max-w-xl text-pretty text-sm text-smoke">
+                  {cloverActive
+                    ? "Active on this subscription. Manage the connection from Integrations."
+                    : `Optional add-on from $${config.clover.pricing.monthly}/month.`}
+                </p>
+                {cloverActive && !config.clover.enabled && (
+                  <p className="mt-2 text-sm text-alert">
+                    Your add-on is billed, but Clover is temporarily disabled platform-wide.
+                  </p>
+                )}
+              </div>
+            </div>
+            <button
+              className={cloverActive ? "btn-secondary text-alert" : "btn-primary"}
+              disabled={busyPlan !== null || (!cloverActive && !config.clover.enabled)}
+              onClick={() => void manageClover(cloverActive ? "remove" : "add")}
+            >
+              {busyPlan === "clover"
+                ? "Updating…"
+                : cloverActive
+                  ? "Remove add-on"
+                  : "Add Clover"}
+            </button>
+          </div>
+        </section>
+      )}
 
       <p className="mt-6 text-xs text-smoke">
         Test mode: use card 4242 4242 4242 4242, any future expiry, any CVC.

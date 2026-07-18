@@ -3,6 +3,7 @@ import {
   adminClient,
   corsHeaders,
   getIntegrationForRestaurant,
+  hasCloverEntitlement,
   json,
   loadCloverConfig,
   logCloverSync,
@@ -20,6 +21,7 @@ Deno.serve(async (req) => {
   try {
     const config = await loadCloverConfig();
     if (!config) return json({ error: "Clover not configured" }, 503);
+    if (!config.enabled) return json({ error: "Clover integration is disabled" }, 503);
 
     const cronSecret = req.headers.get("X-Cron-Secret");
     const isCron = cronSecret && cronSecret === config.cron_secret;
@@ -49,6 +51,9 @@ Deno.serve(async (req) => {
         .single();
       if (!restaurant) return json({ error: "No restaurant" }, 400);
       restaurantId = restaurant.id;
+      if (!(await hasCloverEntitlement(restaurantId))) {
+        return json({ error: "An active Clover add-on is required" }, 403);
+      }
 
       if (manualFullPush) {
         await adminClient().from("clover_sync_queue").insert({
@@ -77,6 +82,16 @@ Deno.serve(async (req) => {
     const errors: { id: string; error: string }[] = [];
 
     for (const job of jobs ?? []) {
+      if (!(await hasCloverEntitlement(job.restaurant_id))) {
+        await admin
+          .from("clover_sync_queue")
+          .update({
+            processed_at: new Date().toISOString(),
+            last_error: "Clover add-on is not active",
+          })
+          .eq("id", job.id);
+        continue;
+      }
       const integration = await getIntegrationForRestaurant(job.restaurant_id);
       if (!integration || integration.status === "disconnected") {
         await admin

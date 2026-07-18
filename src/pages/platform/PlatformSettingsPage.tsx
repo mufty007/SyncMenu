@@ -46,6 +46,19 @@ export default function PlatformSettingsPage() {
     }));
   }
 
+  function updateCloverPricing(
+    field: "monthly" | "annualMonthly",
+    value: number
+  ) {
+    setConfig((c) => ({
+      ...c,
+      clover: {
+        ...c.clover,
+        pricing: { ...c.clover.pricing, [field]: value },
+      },
+    }));
+  }
+
   async function save() {
     setBusy(true);
     setError(null);
@@ -212,6 +225,45 @@ export default function PlatformSettingsPage() {
                 </div>
               </div>
             ))}
+          </div>
+          <div className="mt-4 rounded-xl border border-mist bg-cloud p-4">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <p className="text-sm font-medium">Clover add-on</p>
+                <p className="mt-1 text-xs text-smoke">
+                  Display price. Stripe charges use the Clover and Clover Yearly nicknames.
+                </p>
+              </div>
+              <span className="rounded-full bg-mist px-2.5 py-1 text-xs text-smoke">
+                Optional add-on
+              </span>
+            </div>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="label">Monthly ($)</label>
+                <input
+                  type="number"
+                  min={1}
+                  className="input tabular-nums"
+                  value={config.clover.pricing.monthly}
+                  onChange={(e) =>
+                    updateCloverPricing("monthly", Number(e.target.value))
+                  }
+                />
+              </div>
+              <div>
+                <label className="label">Annual / mo ($)</label>
+                <input
+                  type="number"
+                  min={1}
+                  className="input tabular-nums"
+                  value={config.clover.pricing.annualMonthly}
+                  onChange={(e) =>
+                    updateCloverPricing("annualMonthly", Number(e.target.value))
+                  }
+                />
+              </div>
+            </div>
           </div>
         </section>
       </div>

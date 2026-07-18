@@ -7,6 +7,7 @@ import {
   ListVideo,
   MonitorPlay,
   Palette,
+  Plug,
   QrCode,
   RefreshCw,
   Store,
@@ -241,7 +242,7 @@ export default function Landing() {
   const [wingsPrice, setWingsPrice] = useState(5.9);
   const [pulse, setPulse] = useState(false);
   const [billingInterval, setBillingInterval] = useState<BillingInterval>("monthly");
-  const { plans } = usePlatformSettings();
+  const { config, plans } = usePlatformSettings();
   const sections = useMemo(() => demoSections(wingsPrice), [wingsPrice]);
 
   function changePrice() {
@@ -565,10 +566,10 @@ export default function Landing() {
         <div className="mx-auto max-w-6xl px-6">
           <Reveal>
             <h2 className="font-display text-center text-3xl font-bold md:text-4xl">
-              Simple pricing. Every feature on every plan.
+              Simple pricing. Pick your screen plan.
             </h2>
             <p className="mx-auto mt-3 max-w-md text-center text-smoke">
-              Pick by how many screens you run — upgrade any time.
+              Every core feature is included. Add Clover delivery sync only if you need it.
             </p>
           </Reveal>
           <BillingIntervalToggle
@@ -623,6 +624,49 @@ export default function Landing() {
             );
             })}
           </div>
+          <Reveal>
+            <div className="mt-8 rounded-2xl border border-mist bg-cloud p-6 md:flex md:items-center md:justify-between md:gap-8">
+              <div className="flex items-start gap-4">
+                <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
+                  <Plug size={21} />
+                </div>
+                <div>
+                  <p className="font-semibold">Clover delivery sync add-on</p>
+                  <p className="mt-1 max-w-2xl text-pretty text-sm text-smoke">
+                    Update one SyncMenu delivery menu and push changes to Clover inventory,
+                    including connected delivery apps.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-5 shrink-0 md:mt-0 md:text-right">
+                <p className="tabular-nums">
+                  <span className="font-display text-3xl font-bold">
+                    $
+                    {billingInterval === "yearly"
+                      ? config.clover.pricing.annualMonthly
+                      : config.clover.pricing.monthly}
+                  </span>
+                  <span className="text-sm text-smoke">/month</span>
+                </p>
+                <p className="mt-0.5 text-xs text-smoke">
+                  {billingInterval === "yearly"
+                    ? `billed annually ($${config.clover.pricing.annualMonthly * 12}/yr)`
+                    : "added to your SyncMenu subscription"}
+                </p>
+              </div>
+            </div>
+            <div className="mt-3 flex flex-wrap justify-center gap-2">
+              {plans.map((plan) => (
+                <Link
+                  key={plan.id}
+                  to={planCheckoutPath(plan.id, billingInterval, "clover")}
+                  className="btn-secondary"
+                >
+                  {plan.name} + Clover
+                </Link>
+              ))}
+            </div>
+          </Reveal>
         </div>
       </section>
 

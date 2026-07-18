@@ -19,6 +19,11 @@ export const PRICE_NICKNAMES: Record<string, Record<string, string>> = {
   pro: { monthly: "Pro", yearly: "Pro Yearly" },
 };
 
+/** Recurring add-on price nicknames under the same Stripe product. */
+export const ADDON_PRICE_NICKNAMES: Record<string, Record<string, string>> = {
+  clover: { monthly: "Clover", yearly: "Clover Yearly" },
+};
+
 /** Optional — set if you created a portal configuration in the shared account. */
 export const PORTAL_CONFIGURATION =
   Deno.env.get("STRIPE_PORTAL_CONFIGURATION") ?? undefined;
@@ -65,6 +70,26 @@ export async function resolvePriceId(
   return id;
 }
 
+/** Resolve an add-on + interval to a Stripe price ID via product nicknames. */
+export async function resolveAddonPriceId(
+  addon: string,
+  interval: string
+): Promise<string> {
+  const nickname = ADDON_PRICE_NICKNAMES[addon]?.[interval];
+  if (!nickname) {
+    throw new Error(`Unknown add-on or interval: ${addon}/${interval}`);
+  }
+  const cache = await loadPriceNicknames();
+  const id = cache.get(nickname);
+  if (!id) {
+    throw new Error(
+      `Stripe price "${nickname}" not found on product ${STRIPE_PRODUCT_ID}. ` +
+        "Check nicknames in the Khidmah product pricing table."
+    );
+  }
+  return id;
+}
+
 /** Map a Stripe price nickname back to our plan_id. */
 export function planFromNickname(nickname: string | null | undefined): string | null {
   if (!nickname) return null;
@@ -80,6 +105,23 @@ export function planFromPrice(price: Stripe.Price | undefined): string | null {
   return (
     planFromNickname(price.nickname) ??
     (price.lookup_key ? planFromNickname(price.lookup_key) : null)
+  );
+}
+
+export function addonFromNickname(
+  nickname: string | null | undefined
+): string | null {
+  if (!nickname) return null;
+  const normalized = nickname.toLowerCase();
+  if (normalized.includes("clover")) return "clover";
+  return null;
+}
+
+export function addonFromPrice(price: Stripe.Price | undefined): string | null {
+  if (!price) return null;
+  return (
+    addonFromNickname(price.nickname) ??
+    (price.lookup_key ? addonFromNickname(price.lookup_key) : null)
   );
 }
 

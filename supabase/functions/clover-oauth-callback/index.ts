@@ -1,6 +1,7 @@
 import {
   adminClient,
   cloverUrls,
+  hasCloverEntitlement,
   loadCloverConfig,
   redirect,
   siteOrigin,
@@ -23,9 +24,13 @@ Deno.serve(async (req) => {
 
     const config = await loadCloverConfig();
     if (!config) return fail("Clover is not configured");
+    if (!config.enabled) return fail("Clover integration is not enabled");
 
     const verified = await verifyOAuthState(config.oauth_state_secret, state);
     if (!verified) return fail("Invalid or expired OAuth state");
+    if (!(await hasCloverEntitlement(verified.restaurantId))) {
+      return fail("An active Clover add-on is required");
+    }
 
     const urls = cloverUrls(config.environment);
     const redirectUri = `${Deno.env.get("SUPABASE_URL")}/functions/v1/clover-oauth-callback`;

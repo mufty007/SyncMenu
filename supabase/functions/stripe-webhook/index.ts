@@ -1,6 +1,11 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import type Stripe from "npm:stripe@17";
-import { json, planFromPrice, stripe } from "../_shared/stripe.ts";
+import {
+  addonFromPrice,
+  json,
+  planFromPrice,
+  stripe,
+} from "../_shared/stripe.ts";
 import { sendAutomation } from "../_shared/automation.ts";
 
 const admin = createClient(
@@ -51,10 +56,18 @@ async function syncSubscription(
     return;
   }
 
-  const item = sub.items.data[0];
+  // Subscription event payloads can truncate items. Always enumerate the
+  // subscription so base plans and every add-on are synchronized.
+  const subscriptionItems = await stripe.subscriptionItems.list({
+    subscription: sub.id,
+    limit: 100,
+  });
+  const planItem = subscriptionItems.data.find(
+    (candidate) => planFromPrice(candidate.price) !== null
+  );
   const planId =
+    planFromPrice(planItem?.price) ??
     (sub.metadata?.plan_id as string | undefined) ??
-    planFromPrice(item?.price) ??
     null;
 
   await admin.from("subscriptions").upsert({
@@ -62,13 +75,44 @@ async function syncSubscription(
     stripe_customer_id: customerId,
     stripe_subscription_id: sub.id,
     plan_id: planId,
-    price_id: item?.price.id ?? null,
+    price_id: planItem?.price.id ?? null,
     status: sub.status,
     current_period_end: sub.current_period_end
       ? new Date(sub.current_period_end * 1000).toISOString()
       : null,
     updated_at: new Date().toISOString(),
   });
+
+  const addonItems = subscriptionItems.data
+    .map((item) => ({ item, addonId: addonFromPrice(item.price) }))
+    .filter(
+      (entry): entry is { item: Stripe.SubscriptionItem; addonId: string } =>
+        entry.addonId !== null
+    );
+
+  for (const { item: addonItem, addonId } of addonItems) {
+    await admin.from("subscription_addons").upsert({
+      restaurant_id: restaurantId,
+      addon_id: addonId,
+      stripe_subscription_id: sub.id,
+      stripe_subscription_item_id: addonItem.id,
+      price_id: addonItem.price.id,
+      status: sub.status,
+      current_period_end: sub.current_period_end
+        ? new Date(sub.current_period_end * 1000).toISOString()
+        : null,
+      updated_at: new Date().toISOString(),
+    });
+  }
+
+  const activeAddonIds = new Set(addonItems.map((entry) => entry.addonId));
+  if (!activeAddonIds.has("clover")) {
+    await admin
+      .from("subscription_addons")
+      .delete()
+      .eq("restaurant_id", restaurantId)
+      .eq("addon_id", "clover");
+  }
 
   const owner = await ownerEmailForRestaurant(restaurantId);
   if (!owner) return;
@@ -78,8 +122,8 @@ async function syncSubscription(
       ? "Starter"
       : planId === "growth"
         ? "Growth"
-        : planId === "scale"
-          ? "Scale"
+        : planId === "pro"
+          ? "Pro"
           : planId || "SyncMenu";
 
   const vars = {

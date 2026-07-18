@@ -2,6 +2,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   cloverUrls,
   corsHeaders,
+  hasCloverEntitlement,
   json,
   loadCloverConfig,
   signOAuthState,
@@ -35,6 +36,9 @@ Deno.serve(async (req) => {
       .eq("owner_id", user.id)
       .single();
     if (!restaurant) return json({ error: "No restaurant for this account" }, 400);
+    if (!(await hasCloverEntitlement(restaurant.id))) {
+      return json({ error: "An active Clover add-on is required" }, 403);
+    }
 
     const expiresAt = Date.now() + 15 * 60 * 1000;
     const state = await signOAuthState(config.oauth_state_secret, restaurant.id, expiresAt);

@@ -75,6 +75,20 @@ export async function loadCloverConfig(): Promise<CloverPlatformConfig | null> {
   };
 }
 
+export async function hasCloverEntitlement(
+  restaurantId: string
+): Promise<boolean> {
+  const admin = adminClient();
+  const { data, error } = await admin.rpc("restaurant_addon_enabled", {
+    p_restaurant_id: restaurantId,
+    p_addon_id: "clover",
+  });
+  if (error) {
+    throw new Error(`Failed to check Clover entitlement: ${error.message}`);
+  }
+  return data === true;
+}
+
 export async function signOAuthState(
   secret: string,
   restaurantId: string,
