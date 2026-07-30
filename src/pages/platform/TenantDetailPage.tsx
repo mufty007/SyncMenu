@@ -52,12 +52,21 @@ export default function TenantDetailPage() {
   const [compPlan, setCompPlan] = useState("growth");
   const [message, setMessage] = useState<string | null>(null);
   const [clover, setClover] = useState<{
+    connected?: boolean;
     status?: string;
     clover_merchant_id?: string;
     delivery_menu_id?: string | null;
     last_push_at?: string | null;
     last_error?: string | null;
+    addon?: {
+      entitled?: boolean;
+      available?: boolean;
+      source?: string | null;
+      status?: string | null;
+      feature_enabled?: boolean;
+    };
   } | null>(null);
+  const [addonBusy, setAddonBusy] = useState(false);
 
   async function load() {
     const [{ data }, { data: cloverData }] = await Promise.all([
@@ -154,6 +163,27 @@ export default function TenantDetailPage() {
     void load();
   }
 
+  async function setCloverAddon(enabled: boolean) {
+    if (!tenant) return;
+    setAddonBusy(true);
+    setMessage(null);
+    const { data, error } = await supabase.rpc("admin_set_restaurant_addon", {
+      p_restaurant_id: tenant.id,
+      p_addon_id: "clover",
+      p_enabled: enabled,
+    });
+    setAddonBusy(false);
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+    setClover((prev) => ({
+      ...(prev ?? { connected: false }),
+      addon: data as NonNullable<typeof clover>["addon"],
+    }));
+    setMessage(enabled ? "Clover add-on granted." : "Clover add-on revoked.");
+  }
+
   if (!tenant) {
     return (
       <div>
@@ -239,33 +269,80 @@ export default function TenantDetailPage() {
           )}
         </div>
 
-        {clover && (
-          <div className="card p-6 lg:col-span-2">
-            <h2 className="font-semibold">Clover delivery sync</h2>
-            <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-              <div>
-                <dt className="text-smoke">Status</dt>
-                <dd className="font-medium capitalize">{clover.status}</dd>
-              </div>
-              <div>
-                <dt className="text-smoke">Clover merchant</dt>
-                <dd className="font-mono text-xs">{clover.clover_merchant_id}</dd>
-              </div>
-              {clover.last_push_at && (
+        <div className="card p-6 lg:col-span-2">
+          <h2 className="font-semibold">Clover delivery sync</h2>
+          <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+            <div>
+              <dt className="text-smoke">Add-on entitlement</dt>
+              <dd className="font-medium">
+                {clover?.addon?.entitled
+                  ? `Active (${clover.addon.source === "admin_grant" ? "admin grant" : clover.addon.source ?? "unknown"})`
+                  : "Not entitled"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-smoke">Platform feature</dt>
+              <dd className="font-medium">
+                {clover?.addon?.feature_enabled ? "Enabled" : "Disabled"}
+              </dd>
+            </div>
+            {clover?.connected && (
+              <>
                 <div>
-                  <dt className="text-smoke">Last push</dt>
-                  <dd>{new Date(clover.last_push_at).toLocaleString()}</dd>
+                  <dt className="text-smoke">Connection</dt>
+                  <dd className="font-medium capitalize">{clover.status}</dd>
                 </div>
-              )}
-              {clover.last_error && (
-                <div className="sm:col-span-2">
-                  <dt className="text-smoke">Last error</dt>
-                  <dd className="text-alert">{clover.last_error}</dd>
+                <div>
+                  <dt className="text-smoke">Clover merchant</dt>
+                  <dd className="font-mono text-xs">{clover.clover_merchant_id}</dd>
                 </div>
-              )}
-            </dl>
+                {clover.last_push_at && (
+                  <div>
+                    <dt className="text-smoke">Last push</dt>
+                    <dd>{new Date(clover.last_push_at).toLocaleString()}</dd>
+                  </div>
+                )}
+                {clover.last_error && (
+                  <div className="sm:col-span-2">
+                    <dt className="text-smoke">Last error</dt>
+                    <dd className="text-alert">{clover.last_error}</dd>
+                  </div>
+                )}
+              </>
+            )}
+            {!clover?.connected && (
+              <div className="sm:col-span-2 text-smoke">Not connected yet.</div>
+            )}
+          </dl>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {clover?.addon?.entitled ? (
+              <button
+                className="btn-secondary"
+                disabled={addonBusy || clover.addon.source === "stripe"}
+                onClick={() => void setCloverAddon(false)}
+                title={
+                  clover.addon.source === "stripe"
+                    ? "Cancel via Stripe for billed add-ons"
+                    : undefined
+                }
+              >
+                {addonBusy ? "Updating…" : "Revoke admin grant"}
+              </button>
+            ) : (
+              <button
+                className="btn-primary"
+                disabled={addonBusy}
+                onClick={() => void setCloverAddon(true)}
+              >
+                {addonBusy ? "Updating…" : "Grant Clover add-on"}
+              </button>
+            )}
           </div>
-        )}
+          <p className="mt-2 text-xs text-smoke">
+            Grants unlock Connect / Import without Stripe checkout. Display price is set in Platform
+            settings.
+          </p>
+        </div>
 
         <div className="card p-6">
           <h2 className="font-semibold">Edit restaurant</h2>

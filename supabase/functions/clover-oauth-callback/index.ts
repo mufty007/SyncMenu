@@ -1,16 +1,24 @@
 import {
   adminClient,
   cloverUrls,
+  getIntegrationForRestaurant,
   hasCloverEntitlement,
   loadCloverConfig,
   redirect,
   siteOrigin,
   verifyOAuthState,
 } from "../_shared/clover.ts";
+import { importCloverMenu } from "../_shared/clover-import.ts";
 
 Deno.serve(async (req) => {
   const origin = siteOrigin();
-  const fail = (msg: string) => redirect(`${origin}/app/settings/integrations?clover=error&message=${encodeURIComponent(msg)}`);
+  const fail = (msg: string, intent: string = "integrations") => {
+    const path =
+      intent === "onboarding_import"
+        ? `/onboarding?clover=error&message=${encodeURIComponent(msg)}`
+        : `/app/settings/integrations?clover=error&message=${encodeURIComponent(msg)}`;
+    return redirect(`${origin}${path}`);
+  };
 
   try {
     const url = new URL(req.url);
@@ -28,8 +36,10 @@ Deno.serve(async (req) => {
 
     const verified = await verifyOAuthState(config.oauth_state_secret, state);
     if (!verified) return fail("Invalid or expired OAuth state");
-    if (!(await hasCloverEntitlement(verified.restaurantId))) {
-      return fail("An active Clover add-on is required");
+    const { restaurantId, intent } = verified;
+
+    if (!(await hasCloverEntitlement(restaurantId))) {
+      return fail("An active Clover add-on is required", intent);
     }
 
     const urls = cloverUrls(config.environment);
@@ -51,7 +61,7 @@ Deno.serve(async (req) => {
     const tokenData = await tokenRes.json();
     if (!tokenRes.ok) {
       console.error("Clover token exchange failed", tokenData);
-      return fail("Clover authorization failed");
+      return fail("Clover authorization failed", intent);
     }
 
     const accessToken = tokenData.access_token as string;
@@ -62,12 +72,12 @@ Deno.serve(async (req) => {
       (tokenData.merchant_id as string | undefined) ??
       (tokenData.merchantId as string | undefined);
 
-    if (!cloverMerchantId) return fail("Clover did not return a merchant ID");
+    if (!cloverMerchantId) return fail("Clover did not return a merchant ID", intent);
 
     const admin = adminClient();
     await admin.from("clover_integrations").upsert(
       {
-        restaurant_id: verified.restaurantId,
+        restaurant_id: restaurantId,
         clover_merchant_id: cloverMerchantId,
         access_token: accessToken,
         refresh_token: refreshToken,
@@ -78,6 +88,25 @@ Deno.serve(async (req) => {
       },
       { onConflict: "restaurant_id" }
     );
+
+    if (intent === "onboarding_import") {
+      try {
+        const integration = await getIntegrationForRestaurant(restaurantId);
+        if (integration) {
+          const result = await importCloverMenu(config, integration);
+          return redirect(
+            `${origin}/onboarding?clover=imported&menu_id=${result.menu_id}`
+          );
+        }
+      } catch (importErr) {
+        console.error(importErr);
+        const msg =
+          importErr instanceof Error ? importErr.message : "Import failed after connect";
+        return redirect(
+          `${origin}/onboarding?clover=error&message=${encodeURIComponent(msg)}`
+        );
+      }
+    }
 
     return redirect(`${origin}/app/settings/integrations?clover=connected`);
   } catch (err) {

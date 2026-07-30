@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Plug, RefreshCw, Unplug } from "lucide-react";
+import { ArrowLeft, Download, Plug, RefreshCw, Unplug } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../context/AuthContext";
+import { usePlatformSettings } from "../../lib/usePlatformSettings";
 import type { Menu } from "../../lib/types";
 
 interface CloverIntegration {
@@ -12,6 +13,10 @@ interface CloverIntegration {
   available: boolean;
   clover_merchant_id?: string;
   delivery_menu_id?: string | null;
+  imported_menu_id?: string | null;
+  initial_import_status?: string;
+  last_import_at?: string | null;
+  last_import_error?: string | null;
   last_full_sync_at?: string | null;
   last_push_at?: string | null;
   last_error?: string | null;
@@ -20,6 +25,7 @@ interface CloverIntegration {
 
 export default function IntegrationsPage() {
   const { restaurant } = useAuth();
+  const { config } = usePlatformSettings();
   const [searchParams, setSearchParams] = useSearchParams();
   const [integration, setIntegration] = useState<CloverIntegration | null>(null);
   const [menus, setMenus] = useState<Menu[]>([]);
@@ -49,7 +55,7 @@ export default function IntegrationsPage() {
     const cloverParam = searchParams.get("clover");
     const errMsg = searchParams.get("message");
     if (cloverParam === "connected") {
-      setMessage("Clover connected. Choose your delivery menu and run a full sync.");
+      setMessage("Clover connected. Import your menu, or choose a delivery menu to push later.");
       setSearchParams({}, { replace: true });
       void load();
     } else if (cloverParam === "error") {
@@ -63,7 +69,9 @@ export default function IntegrationsPage() {
   async function connectClover() {
     setBusy(true);
     setError(null);
-    const { data, error: err } = await supabase.functions.invoke("clover-oauth-start");
+    const { data, error: err } = await supabase.functions.invoke("clover-oauth-start", {
+      body: { intent: "integrations" },
+    });
     setBusy(false);
     if (err) {
       setError(err.message);
@@ -104,6 +112,42 @@ export default function IntegrationsPage() {
     }
     setIntegration(data as CloverIntegration);
     setConfirmPush(true);
+    setMessage("Delivery menu saved. Confirm below to push to Clover.");
+  }
+
+  async function importFromClover(forceNew = false) {
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    const { data, error: err } = await supabase.functions.invoke("clover-import", {
+      body: { force_new: forceNew },
+    });
+    setBusy(false);
+    if (err) {
+      setError(err.message);
+      return;
+    }
+    const result = data as {
+      ok?: boolean;
+      menu_id?: string;
+      items?: number;
+      sections?: number;
+      already_imported?: boolean;
+      message?: string;
+      error?: string;
+    };
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+    if (result.already_imported) {
+      setMessage(result.message ?? "Menu already imported.");
+    } else {
+      setMessage(
+        `Imported ${result.items ?? 0} items in ${result.sections ?? 0} categories. You can edit the menu before pushing to Clover.`
+      );
+    }
+    await load();
   }
 
   async function syncNow() {
@@ -133,6 +177,8 @@ export default function IntegrationsPage() {
   const entitled = integration?.entitled ?? false;
   const available = integration?.available ?? false;
   const connected = integration?.connected ?? false;
+  const importDone = integration?.initial_import_status === "done";
+  const importRunning = integration?.initial_import_status === "running";
 
   return (
     <div className="max-w-2xl">
@@ -141,8 +187,8 @@ export default function IntegrationsPage() {
       </Link>
       <h1 className="mt-4 text-2xl font-semibold">Integrations</h1>
       <p className="mt-1 text-sm text-smoke">
-        Push menu changes from SyncMenu to Clover. If Uber Eats or DoorDash are connected in Clover,
-        they update automatically.
+        Import your Clover menu into SyncMenu, then push updates back when you are ready. Delivery
+        apps linked in Clover follow your Clover inventory.
       </p>
 
       {!featureEnabled && (
@@ -161,11 +207,15 @@ export default function IntegrationsPage() {
             <div>
               <h2 className="font-semibold">Clover POS</h2>
               <p className="mt-1 text-pretty text-sm text-smoke">
-                Clover delivery sync is a paid add-on. Add it to your SyncMenu
-                subscription before connecting a merchant account.
+                Clover delivery sync is an add-on
+                {config.clover.pricing.monthly
+                  ? ` (from $${config.clover.pricing.monthly}/mo)`
+                  : ""}
+                . Ask SyncMenu support to enable it on your account, then connect Clover and import
+                your menu.
               </p>
-              <Link to="/app/billing" className="btn-primary mt-4">
-                View Clover add-on
+              <Link to="/contact" className="btn-primary mt-4">
+                Contact support
               </Link>
             </div>
           </div>
@@ -181,7 +231,8 @@ export default function IntegrationsPage() {
             <div className="flex-1">
               <h2 className="font-semibold">Clover POS</h2>
               <p className="mt-1 text-sm text-smoke">
-                Edit your delivery menu in SyncMenu — changes push to Clover inventory.
+                Pull categories and items from Clover to start editing in SyncMenu, then push a
+                delivery menu when you are ready.
               </p>
             </div>
           </div>
@@ -197,26 +248,64 @@ export default function IntegrationsPage() {
                   <p className="text-smoke">Clover merchant ID</p>
                   <p className="font-mono text-xs">{integration?.clover_merchant_id}</p>
                 </div>
+                {integration?.last_import_at && (
+                  <div>
+                    <p className="text-smoke">Last import</p>
+                    <p>{new Date(integration.last_import_at).toLocaleString()}</p>
+                  </div>
+                )}
                 {integration?.last_push_at && (
                   <div>
-                    <p className="text-smoke">Last sync</p>
+                    <p className="text-smoke">Last push</p>
                     <p>{new Date(integration.last_push_at).toLocaleString()}</p>
                   </div>
                 )}
               </div>
 
-              {integration?.last_error && (
+              {(integration?.last_error || integration?.last_import_error) && (
                 <div className="rounded-xl border border-alert/30 bg-alert/10 p-3 text-sm text-alert">
-                  {integration.last_error}
+                  {integration.last_import_error ?? integration.last_error}
                 </div>
               )}
 
+              <div className="rounded-xl border border-mist bg-cloud p-4">
+                <p className="font-medium">Import from Clover</p>
+                <p className="mt-1 text-sm text-smoke">
+                  Creates a new SyncMenu menu with your Clover categories and items. Does not push
+                  anything back to Clover.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    className="btn-primary"
+                    disabled={busy || importRunning}
+                    onClick={() => void importFromClover(!importDone)}
+                  >
+                    <Download size={16} />
+                    {importRunning
+                      ? "Importing…"
+                      : importDone
+                        ? "Re-import into new menu"
+                        : "Import menu from Clover"}
+                  </button>
+                  {importDone && integration?.imported_menu_id && (
+                    <Link
+                      to={`/app/menus/${integration.imported_menu_id}`}
+                      className="btn-secondary"
+                    >
+                      Open imported menu
+                    </Link>
+                  )}
+                </div>
+              </div>
+
               <div>
-                <label className="label">Delivery menu</label>
+                <label className="label">Delivery menu (for push)</label>
                 <select
                   className="input"
                   value={integration?.delivery_menu_id ?? ""}
-                  onChange={(e) => void setDeliveryMenu(e.target.value)}
+                  onChange={(e) => {
+                    if (e.target.value) void setDeliveryMenu(e.target.value);
+                  }}
                   disabled={busy}
                 >
                   <option value="" disabled>
@@ -229,7 +318,7 @@ export default function IntegrationsPage() {
                   ))}
                 </select>
                 <p className="mt-1 text-xs text-smoke">
-                  Only this menu syncs to Clover and delivery apps. TV boards can use other menus.
+                  Selecting a menu saves it only — push happens after you confirm.
                 </p>
               </div>
 
@@ -251,7 +340,11 @@ export default function IntegrationsPage() {
               )}
 
               <div className="flex flex-wrap gap-2">
-                <button className="btn-secondary" disabled={busy} onClick={() => void syncNow()}>
+                <button
+                  className="btn-secondary"
+                  disabled={busy || !integration?.delivery_menu_id}
+                  onClick={() => setConfirmPush(true)}
+                >
                   <RefreshCw size={16} /> Sync now
                 </button>
                 <button className="btn-secondary text-alert" disabled={busy} onClick={() => void disconnect()}>
@@ -262,8 +355,8 @@ export default function IntegrationsPage() {
           ) : (
             <div className="mt-6 border-t border-mist pt-6">
               <p className="text-sm text-smoke">
-                Requires an active Clover account with Online Ordering. Connect Uber Eats and/or
-                DoorDash inside Clover first for delivery sync.
+                Requires an active Clover account. After connecting you can import your existing
+                inventory into SyncMenu.
               </p>
               <button className="btn-primary mt-4" disabled={busy} onClick={() => void connectClover()}>
                 <Plug size={16} /> Connect Clover

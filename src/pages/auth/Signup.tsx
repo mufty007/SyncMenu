@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import Logo from "../../components/Logo";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { resolvePostAuthPath } from "../../lib/authRedirect";
+import { parseBillingParams, saveBillingIntent } from "../../lib/billingParams";
 import SetupNotice from "../SetupNotice";
 
 export default function Signup() {
@@ -12,6 +13,8 @@ export default function Signup() {
   const [needsConfirm, setNeedsConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const billingIntent = parseBillingParams(searchParams);
 
   if (!isSupabaseConfigured) return <SetupNotice />;
 
@@ -24,6 +27,9 @@ export default function Signup() {
     if (err) {
       setError(err.message);
       return;
+    }
+    if (billingIntent.plan || billingIntent.addon) {
+      saveBillingIntent(billingIntent);
     }
     if (!data.session) {
       // Email confirmation is enabled on the Supabase project
@@ -38,7 +44,11 @@ export default function Signup() {
       },
     });
     const dest = await resolvePostAuthPath();
-    navigate(dest === "/app" ? "/onboarding" : dest, { replace: true });
+    const qs = searchParams.toString();
+    navigate(
+      dest === "/app" ? `/onboarding${qs ? `?${qs}` : ""}` : dest,
+      { replace: true }
+    );
   }
 
   return (

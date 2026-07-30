@@ -18,12 +18,12 @@ where id = 1;
 -- Persistent per-restaurant add-on state (written by Stripe services)
 -- ------------------------------------------------------------------
 
-create table public.subscription_addons (
+create table if not exists public.subscription_addons (
   restaurant_id uuid not null references public.restaurants(id) on delete cascade,
   addon_id text not null check (addon_id in ('clover')),
-  stripe_subscription_id text not null,
-  stripe_subscription_item_id text not null unique,
-  price_id text not null,
+  stripe_subscription_id text,
+  stripe_subscription_item_id text,
+  price_id text,
   status text not null,
   current_period_end timestamptz,
   created_at timestamptz not null default now(),
@@ -31,11 +31,12 @@ create table public.subscription_addons (
   primary key (restaurant_id, addon_id)
 );
 
-create index subscription_addons_subscription_idx
+create index if not exists subscription_addons_subscription_idx
   on public.subscription_addons (stripe_subscription_id);
 
 alter table public.subscription_addons enable row level security;
 
+drop policy if exists subscription_addons_owner_read on public.subscription_addons;
 create policy subscription_addons_owner_read on public.subscription_addons
   for select
   to authenticated

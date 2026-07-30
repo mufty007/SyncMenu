@@ -47,6 +47,19 @@ export function planCheckoutPath(
   return buildBillingPath({ plan: planId, interval, checkout: true, addon });
 }
 
+/** Signup path that carries plan + optional Clover add-on intent (no Stripe add-on charge yet). */
+export function planSignupPath(
+  planId: string,
+  interval: BillingInterval,
+  addon?: "clover"
+): string {
+  const params = new URLSearchParams();
+  params.set("plan", planId);
+  params.set("interval", interval);
+  if (addon) params.set("addon", addon);
+  return `/signup?${params.toString()}`;
+}
+
 export function saveBillingIntent(intent: BillingIntent): void {
   sessionStorage.setItem(BILLING_INTENT_KEY, JSON.stringify(intent));
 }

@@ -20,7 +20,7 @@ import ScaledFrame from "../components/ScaledFrame";
 import MenuBoard from "../templates/MenuBoard";
 import Reveal from "../components/Reveal";
 import { SiteFooter, SiteHeader } from "../components/SiteChrome";
-import { planCheckoutPath, type BillingInterval } from "../lib/billingParams";
+import { planCheckoutPath, planSignupPath, type BillingInterval } from "../lib/billingParams";
 import { usePlatformSettings } from "../lib/usePlatformSettings";
 import type { TemplateId } from "../lib/types";
 
@@ -659,13 +659,17 @@ export default function Landing() {
               {plans.map((plan) => (
                 <Link
                   key={plan.id}
-                  to={planCheckoutPath(plan.id, billingInterval, "clover")}
+                  to={planSignupPath(plan.id, billingInterval, "clover")}
                   className="btn-secondary"
                 >
                   {plan.name} + Clover
                 </Link>
               ))}
             </div>
+            <p className="mt-3 text-center text-xs text-smoke">
+              Add-on pricing is set by SyncMenu. Your account is enabled for Clover by the platform
+              team after signup.
+            </p>
           </Reveal>
         </div>
       </section>

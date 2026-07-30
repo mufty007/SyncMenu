@@ -89,12 +89,15 @@ export async function hasCloverEntitlement(
   return data === true;
 }
 
+export type OAuthReturnIntent = "integrations" | "onboarding_import";
+
 export async function signOAuthState(
   secret: string,
   restaurantId: string,
-  expiresAt: number
+  expiresAt: number,
+  intent: OAuthReturnIntent = "integrations"
 ): Promise<string> {
-  const payload = `${restaurantId}:${expiresAt}`;
+  const payload = `${restaurantId}:${expiresAt}:${intent}`;
   const key = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(secret),
@@ -113,17 +116,21 @@ export async function signOAuthState(
 export async function verifyOAuthState(
   secret: string,
   state: string
-): Promise<{ restaurantId: string } | null> {
+): Promise<{ restaurantId: string; intent: OAuthReturnIntent } | null> {
   const [payloadB64, sig] = state.split(".");
   if (!payloadB64 || !sig) return null;
   const payload = atob(payloadB64);
-  const [restaurantId, expiresStr] = payload.split(":");
-  const expiresAt = Number(expiresStr);
+  const parts = payload.split(":");
+  const restaurantId = parts[0];
+  const expiresAt = Number(parts[1]);
+  const intentRaw = parts[2] ?? "integrations";
+  const intent: OAuthReturnIntent =
+    intentRaw === "onboarding_import" ? "onboarding_import" : "integrations";
   if (!restaurantId || !expiresAt || Date.now() > expiresAt) return null;
 
-  const expected = await signOAuthState(secret, restaurantId, expiresAt);
+  const expected = await signOAuthState(secret, restaurantId, expiresAt, intent);
   if (expected !== state) return null;
-  return { restaurantId };
+  return { restaurantId, intent };
 }
 
 export interface CloverIntegrationRow {
@@ -134,6 +141,8 @@ export interface CloverIntegrationRow {
   refresh_token: string;
   access_token_expires_at: string;
   delivery_menu_id: string | null;
+  imported_menu_id?: string | null;
+  initial_import_status?: string;
   status: string;
 }
 
@@ -278,6 +287,54 @@ export class CloverApiClient {
 
   getMerchant() {
     return this.request<Record<string, unknown>>("");
+  }
+
+  async listAll<T>(path: string, expand: string[] = []): Promise<T[]> {
+    const results: T[] = [];
+    let offset = 0;
+    const limit = 100;
+    for (;;) {
+      const params = new URLSearchParams({
+        limit: String(limit),
+        offset: String(offset),
+      });
+      for (const e of expand) params.append("expand", e);
+      const sep = path.includes("?") ? "&" : "?";
+      const page = await this.request<{ elements?: T[] }>(`${path}${sep}${params}`);
+      const elements = page.elements ?? [];
+      results.push(...elements);
+      if (elements.length < limit) break;
+      offset += limit;
+    }
+    return results;
+  }
+
+  listCategories() {
+    return this.listAll<{
+      id: string;
+      name: string;
+      sortOrder?: number;
+    }>("/categories");
+  }
+
+  listItems() {
+    return this.listAll<{
+      id: string;
+      name: string;
+      price?: number;
+      hidden?: boolean;
+      available?: boolean;
+      description?: string;
+      categories?: { elements?: { id: string }[] };
+    }>("/items", ["categories"]);
+  }
+
+  async getItemStock(itemId: string): Promise<{ quantity?: number | null; stockCount?: number | null } | null> {
+    try {
+      return await this.request(`/item_stocks/${itemId}`);
+    } catch {
+      return null;
+    }
   }
 }
 

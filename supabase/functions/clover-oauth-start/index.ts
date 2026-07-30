@@ -6,6 +6,7 @@ import {
   json,
   loadCloverConfig,
   signOAuthState,
+  type OAuthReturnIntent,
 } from "../_shared/clover.ts";
 
 Deno.serve(async (req) => {
@@ -40,8 +41,21 @@ Deno.serve(async (req) => {
       return json({ error: "An active Clover add-on is required" }, 403);
     }
 
+    let intent: OAuthReturnIntent = "integrations";
+    try {
+      const body = (await req.json()) as { intent?: string };
+      if (body.intent === "onboarding_import") intent = "onboarding_import";
+    } catch {
+      /* no body */
+    }
+
     const expiresAt = Date.now() + 15 * 60 * 1000;
-    const state = await signOAuthState(config.oauth_state_secret, restaurant.id, expiresAt);
+    const state = await signOAuthState(
+      config.oauth_state_secret,
+      restaurant.id,
+      expiresAt,
+      intent
+    );
     const urls = cloverUrls(config.environment);
     const redirectUri = `${Deno.env.get("SUPABASE_URL")}/functions/v1/clover-oauth-callback`;
 
