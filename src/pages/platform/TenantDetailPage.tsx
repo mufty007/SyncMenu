@@ -205,7 +205,17 @@ export default function TenantDetailPage() {
   const rows: [string, React.ReactNode][] = [
     ["Status", <StatusBadge status={tenant.status} />],
     ["Owner", tenant.owner_email || "Not invited yet"],
-    ["Studio", tenant.studio_name || "Self-serve"],
+    ["Studio", tenant.studio_name ? (
+      tenant.managed_by_studio_id ? (
+        <Link to={`/platform/studios/${tenant.managed_by_studio_id}`} className="text-brand hover:text-ember">
+          {tenant.studio_name}
+        </Link>
+      ) : (
+        tenant.studio_name
+      )
+    ) : (
+      "Self-serve"
+    )],
     ["Signed up", new Date(tenant.created_at).toLocaleDateString()],
     ["Trial ends", new Date(tenant.trial_ends_at).toLocaleDateString()],
     [

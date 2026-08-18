@@ -41,6 +41,8 @@ const PlatformLayout = lazy(() => import("./pages/platform/PlatformLayout"));
 const PlatformOverviewPage = lazy(() => import("./pages/platform/PlatformOverviewPage"));
 const TenantsPage = lazy(() => import("./pages/platform/TenantsPage"));
 const TenantDetailPage = lazy(() => import("./pages/platform/TenantDetailPage"));
+const StudiosPage = lazy(() => import("./pages/platform/StudiosPage"));
+const StudioDetailPage = lazy(() => import("./pages/platform/StudioDetailPage"));
 const PlatformBillingPage = lazy(() => import("./pages/platform/PlatformBillingPage"));
 const EmailsPage = lazy(() => import("./pages/platform/EmailsPage"));
 const PlatformIntegrationsPage = lazy(() => import("./pages/platform/IntegrationsPage"));
@@ -267,6 +269,8 @@ export default function App() {
         <Route index element={<PlatformOverviewPage />} />
         <Route path="tenants" element={<TenantsPage />} />
         <Route path="tenants/:id" element={<TenantDetailPage />} />
+        <Route path="studios" element={<StudiosPage />} />
+        <Route path="studios/:id" element={<StudioDetailPage />} />
         <Route path="billing" element={<PlatformBillingPage />} />
         <Route path="emails" element={<EmailsPage />} />
         <Route path="integrations" element={<PlatformIntegrationsPage />} />

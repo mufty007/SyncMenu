@@ -4,6 +4,7 @@ import {
   Building2,
   CreditCard,
   MonitorPlay,
+  Palette,
   Sparkles,
   TrendingUp,
 } from "lucide-react";
@@ -16,6 +17,9 @@ interface Stats {
   subscribed: number;
   signups_7d: number;
   total_screens: number;
+  total_studios?: number;
+  partner_restaurants?: number;
+  partner_subscribed?: number;
 }
 
 function StatSkeleton() {
@@ -56,7 +60,7 @@ export default function PlatformOverviewPage() {
         <>
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {!stats ? (
-              Array.from({ length: 5 }).map((_, i) => <StatSkeleton key={i} />)
+              Array.from({ length: 7 }).map((_, i) => <StatSkeleton key={i} />)
             ) : (
               <>
                 <StatCard
@@ -88,11 +92,23 @@ export default function PlatformOverviewPage() {
                   label="Screens paired"
                   value={stats.total_screens}
                 />
+                <StatCard
+                  icon={Palette}
+                  label="Designer studios"
+                  value={stats.total_studios ?? 0}
+                  hint={`${stats.partner_restaurants ?? 0} partner restaurants`}
+                />
+                <StatCard
+                  icon={CreditCard}
+                  label="Partner subscribed"
+                  value={stats.partner_subscribed ?? 0}
+                  hint="Paying shops brought in by studios"
+                />
               </>
             )}
           </div>
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-2">
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Link
               to="/platform/tenants"
               className="card flex items-center justify-between p-5 transition-shadow hover:shadow-md"
@@ -104,6 +120,18 @@ export default function PlatformOverviewPage() {
                 </p>
               </div>
               <Building2 size={20} className="text-brand" />
+            </Link>
+            <Link
+              to="/platform/studios"
+              className="card flex items-center justify-between p-5 transition-shadow hover:shadow-md"
+            >
+              <div>
+                <p className="font-medium">Manage designers</p>
+                <p className="mt-0.5 text-sm text-smoke">
+                  Studio usage, restaurant counts, and partner billing.
+                </p>
+              </div>
+              <Palette size={20} className="text-brand" />
             </Link>
             <Link
               to="/platform/billing"

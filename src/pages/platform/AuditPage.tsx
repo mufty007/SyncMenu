@@ -21,6 +21,9 @@ const ACTION_LABELS: Record<string, string> = {
   add_admin: "Added admin",
   remove_admin: "Removed admin",
   send_campaign: "Sent announcement",
+  update_studio: "Updated studio",
+  suspend_studio: "Suspended studio restaurants",
+  unsuspend_studio: "Reactivated studio restaurants",
 };
 
 function actionLabel(action: string) {

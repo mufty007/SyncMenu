@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   LogOut,
   Mail,
+  Palette,
   Plug,
   ScrollText,
   Settings,
@@ -18,6 +19,7 @@ import { useAuth } from "../../context/AuthContext";
 const NAV = [
   { to: "/platform", label: "Overview", icon: LayoutDashboard, end: true },
   { to: "/platform/tenants", label: "Restaurants", icon: Building2 },
+  { to: "/platform/studios", label: "Designers", icon: Palette },
   { to: "/platform/billing", label: "Billing", icon: CreditCard },
   { to: "/platform/emails", label: "Emails", icon: Mail },
   { to: "/platform/integrations", label: "Integrations", icon: Plug },
