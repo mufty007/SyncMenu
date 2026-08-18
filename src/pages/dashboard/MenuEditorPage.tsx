@@ -44,7 +44,7 @@ const ACCENT_SWATCHES = ["#FF6B2C", "#E5484D", "#22B573", "#2563EB", "#7C3AED", 
 
 export default function MenuEditorPage() {
   const { menuId } = useParams();
-  const { restaurant } = useAuth();
+  const { restaurant, canDesign } = useAuth();
   const navigate = useNavigate();
   const [menu, setMenu] = useState<Menu | null>(null);
   const [sections, setSections] = useState<SectionWithItems[]>([]);
@@ -83,11 +83,13 @@ export default function MenuEditorPage() {
 
   useEffect(() => {
     if (!menuId) return;
-    void supabase.rpc("get_clover_integration").then(({ data }) => {
+    void supabase.rpc("get_clover_integration", {
+      p_restaurant_id: restaurant?.id ?? null,
+    }).then(({ data }) => {
       const clover = data as { delivery_menu_id?: string; status?: string } | null;
       setIsDeliveryMenu(clover?.delivery_menu_id === menuId && clover?.status === "active");
     });
-  }, [menuId]);
+  }, [menuId, restaurant?.id]);
 
   useEffect(() => {
     if (!dirty) return;
@@ -154,12 +156,16 @@ export default function MenuEditorPage() {
     try {
       const { error: menuErr } = await supabase
         .from("menus")
-        .update({
-          name: menu.name.trim() || "Untitled menu",
-          template_id: menu.template_id,
-          template_config: menu.template_config,
-          orientation: menu.orientation,
-        })
+        .update(
+          canDesign
+            ? {
+                name: menu.name.trim() || "Untitled menu",
+                template_id: menu.template_id,
+                template_config: menu.template_config,
+                orientation: menu.orientation,
+              }
+            : { name: menu.name.trim() || "Untitled menu" }
+        )
         .eq("id", menu.id);
       if (menuErr) throw menuErr;
 
@@ -398,9 +404,11 @@ export default function MenuEditorPage() {
         <button className="btn-secondary" onClick={() => setShowPreview(true)} title="Full-screen preview">
           <Expand size={16} /> Preview
         </button>
-        <button className="btn-ghost text-alert hover:bg-alert/10 hover:text-alert" onClick={() => void deleteMenu()}>
-          <Trash2 size={16} /> Delete
-        </button>
+        {canDesign && (
+          <button className="btn-ghost text-alert hover:bg-alert/10 hover:text-alert" onClick={() => void deleteMenu()}>
+            <Trash2 size={16} /> Delete
+          </button>
+        )}
       </div>
 
       {saveMessage && (
@@ -433,7 +441,7 @@ export default function MenuEditorPage() {
         </PreviewModal>
       )}
       {showQr && <QrModal menuId={menu.id} onClose={() => setShowQr(false)} />}
-      {showTemplatePicker && (
+      {canDesign && showTemplatePicker && (
         <TemplatePickerModal
           currentId={menu.template_id}
           config={config}
@@ -533,6 +541,7 @@ export default function MenuEditorPage() {
             </ScaledFrame>
           </div>
 
+          {canDesign ? (
           <div className="card space-y-5 p-5">
             <div>
               <p className="label">Template</p>
@@ -944,6 +953,14 @@ export default function MenuEditorPage() {
               </p>
             </div>
           </div>
+          ) : (
+            <div className="card p-5">
+              <p className="text-sm font-medium">Design is locked</p>
+              <p className="mt-1 text-sm text-smoke">
+                Your studio manages templates and layout. You can edit items, prices, and photos.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

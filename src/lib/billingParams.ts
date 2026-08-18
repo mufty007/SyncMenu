@@ -1,4 +1,4 @@
-import { PLANS } from "./types";
+import { ALL_PLANS } from "./types";
 
 export type BillingInterval = "monthly" | "yearly";
 
@@ -16,7 +16,7 @@ export function isBillingInterval(value: string | null): value is BillingInterva
 }
 
 export function isValidPlanId(plan: string | null): plan is string {
-  return !!plan && PLANS.some((p) => p.id === plan);
+  return !!plan && ALL_PLANS.some((p) => p.id === plan);
 }
 
 export function parseBillingParams(search: URLSearchParams): BillingIntent {

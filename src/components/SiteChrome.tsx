@@ -7,6 +7,7 @@ const MOBILE_LINKS = [
   { to: "/#features", label: "Features" },
   { to: "/#clover", label: "Clover sync" },
   { to: "/#pricing", label: "Pricing" },
+  { to: "/for-designers", label: "For designers" },
   { to: "/contact", label: "Contact" },
 ];
 
@@ -29,6 +30,9 @@ export function SiteHeader() {
           </Link>
           <Link to="/#pricing" className="btn-ghost">
             Pricing
+          </Link>
+          <Link to="/for-designers" className="btn-ghost">
+            For designers
           </Link>
           <Link to="/contact" className="btn-ghost">
             Contact
@@ -108,6 +112,11 @@ export function SiteFooter() {
             <li>
               <Link to="/#pricing" className="hover:text-brand">
                 Pricing
+              </Link>
+            </li>
+            <li>
+              <Link to="/for-designers" className="hover:text-brand">
+                For designers
               </Link>
             </li>
             <li>

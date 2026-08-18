@@ -93,6 +93,10 @@ export default function Login() {
             <Link to="/signup" className="font-medium text-brand hover:text-ember">
               Start your free trial
             </Link>
+            {" · "}
+            <Link to="/signup?type=designer" className="font-medium text-brand hover:text-ember">
+              Designer signup
+            </Link>
           </p>
         </form>
       </div>

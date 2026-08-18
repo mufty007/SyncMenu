@@ -59,7 +59,7 @@ const TEMPLATE_STARTERS: { id: TemplateId; label: string }[] = [
 
 export default function StudioPage() {
   const { menuId } = useParams();
-  const { restaurant } = useAuth();
+  const { restaurant, canDesign } = useAuth();
   const [menu, setMenu] = useState<Menu | null>(null);
   const [sections, setSections] = useState<SectionWithItems[]>([]);
   const [config, setConfig] = useState<TemplateConfig | null>(null);
@@ -247,6 +247,17 @@ export default function StudioPage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#22282F]">
         <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-white/20 border-t-brand" />
+      </div>
+    );
+  }
+
+  if (!canDesign) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-6">
+        <p className="text-sm text-smoke">Design is managed by your studio.</p>
+        <Link to="/app/menus" className="btn-primary">
+          Back to menus
+        </Link>
       </div>
     );
   }

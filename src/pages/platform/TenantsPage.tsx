@@ -11,6 +11,7 @@ interface TenantRow {
   trial_ends_at: string;
   created_at: string;
   owner_email: string;
+  studio_name?: string | null;
   plan_id: string | null;
   subscription_status: string | null;
   screen_count: number;
@@ -117,7 +118,12 @@ export default function TenantsPage() {
                         {r.name}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-smoke">{r.owner_email}</td>
+                    <td className="px-4 py-3 text-smoke">
+                      {r.owner_email || "—"}
+                      {r.studio_name && (
+                        <span className="mt-0.5 block text-xs text-smoke/80">{r.studio_name}</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       <span className="rounded-full bg-mist/60 px-2.5 py-1 text-xs font-medium capitalize text-smoke">
                         {planLabel(r)}

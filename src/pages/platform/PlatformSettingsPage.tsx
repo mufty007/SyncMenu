@@ -9,8 +9,8 @@ import {
 import { invalidatePlatformSettingsCache } from "../../lib/usePlatformSettings";
 import { PageHeader } from "./ui";
 
-const PLAN_IDS = ["trial", "starter", "growth", "pro"] as const;
-const PAID_PLAN_IDS = ["starter", "growth", "pro"] as const;
+const PLAN_IDS = ["trial", "starter", "growth", "pro", "partner", "partner_growth", "partner_pro"] as const;
+const PAID_PLAN_IDS = ["starter", "growth", "pro", "partner", "partner_growth", "partner_pro"] as const;
 
 export default function PlatformSettingsPage() {
   const [config, setConfig] = useState<PlatformConfig>(DEFAULT_PLATFORM_CONFIG);
@@ -161,7 +161,7 @@ export default function PlatformSettingsPage() {
           <div className="mt-4 space-y-4">
             {PLAN_IDS.map((plan) => (
               <div key={plan} className="rounded-xl bg-cloud p-4">
-                <p className="text-sm font-medium capitalize">{plan}</p>
+                <p className="text-sm font-medium">{plan.replace(/_/g, " ")}</p>
                 <div className="mt-2 grid grid-cols-2 gap-3">
                   <div>
                     <label className="label">Screens</label>
@@ -198,7 +198,7 @@ export default function PlatformSettingsPage() {
           <div className="mt-4 grid gap-4 md:grid-cols-3">
             {PAID_PLAN_IDS.map((plan) => (
               <div key={plan} className="rounded-xl bg-cloud p-4">
-                <p className="text-sm font-medium capitalize">{plan}</p>
+                <p className="text-sm font-medium">{plan.replace(/_/g, " ")}</p>
                 <div className="mt-2 space-y-3">
                   <div>
                     <label className="label">Monthly ($)</label>

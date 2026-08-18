@@ -22,6 +22,8 @@ interface TenantDetail {
   trial_ends_at: string;
   created_at: string;
   owner_email: string;
+  studio_name?: string | null;
+  managed_by_studio_id?: string | null;
   screen_count: number;
   menu_count: number;
   screen_limit_override: number | null;
@@ -36,7 +38,7 @@ interface TenantDetail {
   } | null;
 }
 
-const PLANS = ["starter", "growth", "pro"] as const;
+const PLANS = ["starter", "growth", "pro", "partner", "partner_growth", "partner_pro"] as const;
 
 export default function TenantDetailPage() {
   const { id } = useParams();
@@ -202,7 +204,8 @@ export default function TenantDetailPage() {
 
   const rows: [string, React.ReactNode][] = [
     ["Status", <StatusBadge status={tenant.status} />],
-    ["Owner", tenant.owner_email],
+    ["Owner", tenant.owner_email || "Not invited yet"],
+    ["Studio", tenant.studio_name || "Self-serve"],
     ["Signed up", new Date(tenant.created_at).toLocaleDateString()],
     ["Trial ends", new Date(tenant.trial_ends_at).toLocaleDateString()],
     [

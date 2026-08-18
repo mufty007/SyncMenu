@@ -9,6 +9,7 @@ import {
   logCloverSync,
 } from "../_shared/clover.ts";
 import { processSyncJob } from "../_shared/clover-sync.ts";
+import { callerRole, loadCallerRestaurant, parseJsonBody } from "../_shared/restaurant.ts";
 
 const MAX_JOBS = 20;
 const MAX_ATTEMPTS = 5;
@@ -41,15 +42,18 @@ Deno.serve(async (req) => {
       } = await supabase.auth.getUser();
       if (!user) return json({ error: "Not signed in" }, 401);
 
-      const body = await req.json().catch(() => ({}));
+      const body = parseJsonBody(await req.json().catch(() => ({})));
       manualFullPush = body.action === "sync_now";
 
-      const { data: restaurant } = await supabase
-        .from("restaurants")
-        .select("id")
-        .eq("owner_id", user.id)
-        .single();
-      if (!restaurant) return json({ error: "No restaurant" }, 400);
+      const { restaurant, error: restErr } = await loadCallerRestaurant(
+        supabase,
+        typeof body.restaurant_id === "string" ? body.restaurant_id : null
+      );
+      if (!restaurant) return json({ error: restErr ?? "No restaurant" }, 400);
+      const role = await callerRole(supabase, restaurant.id);
+      if (role !== "owner" && role !== "designer") {
+        return json({ error: "Only the designer or owner can sync Clover." }, 403);
+      }
       restaurantId = restaurant.id;
       if (!(await hasCloverEntitlement(restaurantId))) {
         return json({ error: "An active Clover add-on is required" }, 403);

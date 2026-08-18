@@ -32,15 +32,19 @@ export function invalidatePlatformSettingsCache() {
 export function usePlatformSettings() {
   const [config, setConfig] = useState<PlatformConfig>(DEFAULT_PLATFORM_CONFIG);
   const [plans, setPlans] = useState<Plan[]>(() => plansFromConfig(DEFAULT_PLATFORM_CONFIG));
+  const [partnerPlans, setPartnerPlans] = useState<Plan[]>(() =>
+    plansFromConfig(DEFAULT_PLATFORM_CONFIG, "partner")
+  );
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     void fetchPlatformConfig().then((merged) => {
       setConfig(merged);
       setPlans(plansFromConfig(merged));
+      setPartnerPlans(plansFromConfig(merged, "partner"));
       setLoaded(true);
     });
   }, []);
 
-  return { config, plans, loaded };
+  return { config, plans, partnerPlans, loaded };
 }

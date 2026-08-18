@@ -9,7 +9,7 @@ import { TEMPLATES } from "../../templates/MenuBoard";
 import { timeAgo } from "../../lib/format";
 
 export default function MenusPage() {
-  const { restaurant } = useAuth();
+  const { restaurant, canDesign } = useAuth();
   const [menus, setMenus] = useState<Menu[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +27,7 @@ export default function MenusPage() {
   }, [restaurant]);
 
   async function duplicateMenu(source: Menu) {
-    if (!restaurant || busy) return;
+    if (!restaurant || busy || !canDesign) return;
     if ((menus?.length ?? 0) >= menuLimit) {
       setError(`Your plan includes up to ${menuLimit} saved menus.`);
       return;
@@ -81,7 +81,7 @@ export default function MenusPage() {
   }
 
   async function createMenu() {
-    if (!restaurant || busy) return;
+    if (!restaurant || busy || !canDesign) return;
     if ((menus?.length ?? 0) >= menuLimit) {
       setError(`Your plan includes up to ${menuLimit} saved menus.`);
       return;
@@ -111,9 +111,12 @@ export default function MenusPage() {
         <div>
           <h1 className="text-2xl font-semibold">Menus</h1>
           <p className="mt-1 text-sm text-smoke">
-            Change a price. It's on your screens in seconds.
+            {canDesign
+              ? "Change a price. It's on your screens in seconds."
+              : "Update items and prices — your designer handles the look."}
           </p>
         </div>
+        {canDesign && (
         <button
           className="btn-primary"
           data-tour="new-menu"
@@ -122,6 +125,7 @@ export default function MenusPage() {
         >
           <Plus size={16} /> New menu
         </button>
+        )}
       </div>
       {error && <p className="mt-4 text-sm text-alert">{error}</p>}
 
@@ -132,12 +136,15 @@ export default function MenusPage() {
           <MonitorSmartphone size={36} className="text-smoke" strokeWidth={1.5} />
           <p className="mt-4 font-medium">No menus yet</p>
           <p className="mt-1 max-w-sm text-sm text-smoke">
-            Create your first menu, pick a template, and it's ready for any
-            screen.
+            {canDesign
+              ? "Create your first menu, pick a template, and it's ready for any screen."
+              : "Your designer hasn't published a menu yet."}
           </p>
+          {canDesign && (
           <button className="btn-primary mt-6" onClick={() => void createMenu()}>
             <Plus size={16} /> Create a menu
           </button>
+          )}
         </div>
       ) : (
         <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -171,6 +178,7 @@ export default function MenusPage() {
                     {timeAgo(menu.updated_at)}
                   </p>
                 </div>
+                {canDesign && (
                 <button
                   className="btn-ghost shrink-0 px-2"
                   title="Duplicate menu"
@@ -181,6 +189,7 @@ export default function MenusPage() {
                 >
                   <Copy size={15} />
                 </button>
+                )}
               </div>
             </Link>
           ))}

@@ -7,6 +7,7 @@ import {
   resolveAddonPriceId,
   stripe,
 } from "../_shared/stripe.ts";
+import { callerRole, loadCallerRestaurant, parseJsonBody } from "../_shared/restaurant.ts";
 
 const ACTIVE_SUBSCRIPTION_STATUSES = new Set(["active", "trialing"]);
 
@@ -27,14 +28,18 @@ Deno.serve(async (req) => {
     } = await supabase.auth.getUser();
     if (!user) return json({ error: "Not signed in" }, 401);
 
-    const { data: restaurant } = await supabase
-      .from("restaurants")
-      .select("id")
-      .eq("owner_id", user.id)
-      .single();
-    if (!restaurant) return json({ error: "No restaurant for this account" }, 400);
+    const body = parseJsonBody(await req.json().catch(() => ({})));
+    const { restaurant, error: restErr } = await loadCallerRestaurant(
+      supabase,
+      typeof body.restaurant_id === "string" ? body.restaurant_id : null
+    );
+    if (!restaurant) return json({ error: restErr ?? "No restaurant for this account" }, 400);
 
-    const body = await req.json().catch(() => ({}));
+    const role = await callerRole(supabase, restaurant.id);
+    if (role !== "owner" && role !== "operator") {
+      return json({ error: "The restaurant owner manages billing." }, 403);
+    }
+
     const action = body.action as "add" | "remove" | undefined;
     if (action !== "add" && action !== "remove") {
       return json({ error: "Action must be add or remove" }, 400);

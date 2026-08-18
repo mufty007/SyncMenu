@@ -700,6 +700,32 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* For designers */}
+      <section className="mx-auto max-w-6xl px-6 pb-16">
+        <Reveal>
+          <div className="flex flex-col items-start justify-between gap-6 rounded-3xl border border-ink/10 bg-white px-8 py-10 md:flex-row md:items-center">
+            <div className="max-w-xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ember">
+                Partner channel
+              </p>
+              <h2 className="mt-2 font-display text-2xl font-bold text-ink md:text-3xl">
+                Design menus for restaurants? Use SyncMenu free.
+              </h2>
+              <p className="mt-3 text-ink-2">
+                Create boards, invite the shop as a limited operator, and they pay
+                from $15/mo. You keep design control until either side transfers.
+              </p>
+            </div>
+            <Link
+              to="/for-designers"
+              className="inline-flex shrink-0 items-center justify-center rounded-xl bg-ink px-6 py-3 text-sm font-medium text-white transition hover:bg-ink/90"
+            >
+              For designers
+            </Link>
+          </div>
+        </Reveal>
+      </section>
+
       {/* CTA band */}
       <section className="mx-auto max-w-6xl px-6 pb-20">
         <Reveal>

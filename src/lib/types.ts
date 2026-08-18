@@ -228,9 +228,43 @@ export const DIETARY_TAGS: { id: string; label: string }[] = [
   { id: "gluten-free", label: "Gluten-free" },
 ];
 
+export type AccountType = "restaurant" | "designer";
+export type RestaurantRole = "owner" | "designer" | "operator";
+export type TransferDirection = "to_restaurant" | "to_studio";
+
+export interface Studio {
+  id: string;
+  owner_user_id: string;
+  name: string;
+  created_at: string;
+}
+
+export interface RestaurantMember {
+  id: string;
+  restaurant_id: string;
+  user_id: string | null;
+  role: RestaurantRole;
+  studio_id: string | null;
+  invited_email: string | null;
+  invite_token?: string | null;
+  invite_expires_at: string | null;
+  accepted_at: string | null;
+  created_at: string;
+}
+
+export interface AccountTransfer {
+  id: string;
+  restaurant_id: string;
+  direction: TransferDirection;
+  requested_by: string;
+  status: "pending" | "accepted" | "cancelled";
+  created_at: string;
+  resolved_at: string | null;
+}
+
 export interface Restaurant {
   id: string;
-  owner_id: string;
+  owner_id: string | null;
   name: string;
   logo_url: string | null;
   brand_color: string;
@@ -242,6 +276,8 @@ export interface Restaurant {
   status?: "active" | "suspended";
   suspended_at?: string | null;
   suspended_reason?: string | null;
+  managed_by_studio_id?: string | null;
+  created_by_studio_id?: string | null;
 }
 
 export interface Menu {
@@ -382,6 +418,9 @@ export const PLAN_LIMITS_BY_PLAN: Record<string, { screens: number; menus: numbe
   starter: { screens: 1, menus: 5, storageMb: 50 },
   growth: { screens: 5, menus: 10, storageMb: 100 },
   pro: { screens: 10, menus: 999, storageMb: 500 },
+  partner: { screens: 2, menus: 5, storageMb: 50 },
+  partner_growth: { screens: 6, menus: 10, storageMb: 100 },
+  partner_pro: { screens: 12, menus: 999, storageMb: 500 },
   trial: { screens: 5, menus: 10, storageMb: 100 },
 };
 
@@ -467,3 +506,60 @@ export const PLANS: Plan[] = [
     ],
   },
 ];
+
+/** Partner-managed restaurants — billed to the restaurant, not the designer. */
+export const PARTNER_PLANS: Plan[] = [
+  {
+    id: "partner",
+    name: "Partner",
+    tagline: "Counter and kitchen",
+    monthly: 15,
+    annualMonthly: 12,
+    perks: [
+      "2 screens",
+      "5 saved menus",
+      "All templates + design studio",
+      "Real-time sync",
+      "Customer QR menus",
+      "50 MB image storage",
+    ],
+  },
+  {
+    id: "partner_growth",
+    name: "Partner Growth",
+    tagline: "For shops with more displays",
+    monthly: 30,
+    annualMonthly: 25,
+    popular: true,
+    perks: [
+      "Up to 6 screens",
+      "10 saved menus",
+      "All templates + design studio",
+      "Playlists & timed rotation",
+      "Ticker bar & featured items",
+      "Customer QR menus",
+      "100 MB image storage",
+    ],
+  },
+  {
+    id: "partner_pro",
+    name: "Partner Pro",
+    tagline: "Every screen in the shop",
+    monthly: 99,
+    annualMonthly: 82,
+    perks: [
+      "Up to 12 screens",
+      "Unlimited saved menus",
+      "Everything in Partner Growth",
+      "Priority support",
+      "500 MB image storage",
+      "Early access to new features",
+    ],
+  },
+];
+
+export const ALL_PLANS: Plan[] = [...PLANS, ...PARTNER_PLANS];
+
+export function isPartnerPlanId(planId: string | null | undefined): boolean {
+  return !!planId && planId.startsWith("partner");
+}

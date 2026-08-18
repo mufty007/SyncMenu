@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { PORTAL_CONFIGURATION, corsHeaders, json, stripe } from "../_shared/stripe.ts";
+import { callerRole, loadCallerRestaurant, parseJsonBody } from "../_shared/restaurant.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -18,17 +19,23 @@ Deno.serve(async (req) => {
     } = await supabase.auth.getUser();
     if (!user) return json({ error: "Not signed in" }, 401);
 
-    const { origin } = await req.json();
+    const body = parseJsonBody(await req.json().catch(() => ({})));
+    const origin = body.origin as string;
+    const { restaurant, error: restErr } = await loadCallerRestaurant(
+      supabase,
+      typeof body.restaurant_id === "string" ? body.restaurant_id : null
+    );
+    if (!restaurant) return json({ error: restErr ?? "No restaurant for this account" }, 400);
 
-    const { data: restaurant } = await supabase
-      .from("restaurants")
-      .select("id")
-      .eq("owner_id", user.id)
-      .single();
+    const role = await callerRole(supabase, restaurant.id);
+    if (role !== "owner" && role !== "operator") {
+      return json({ error: "The restaurant owner manages billing." }, 403);
+    }
+
     const { data: sub } = await supabase
       .from("subscriptions")
       .select("stripe_customer_id")
-      .eq("restaurant_id", restaurant?.id ?? "")
+      .eq("restaurant_id", restaurant.id)
       .maybeSingle();
     if (!sub?.stripe_customer_id) {
       return json({ error: "No billing account yet — subscribe first." }, 400);

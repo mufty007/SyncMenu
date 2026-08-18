@@ -14,8 +14,8 @@ import { usePlatformSettings } from "../../lib/usePlatformSettings";
 import type { Subscription, SubscriptionAddon } from "../../lib/types";
 
 export default function BillingPage() {
-  const { restaurant } = useAuth();
-  const { config, plans } = usePlatformSettings();
+  const { restaurant, canPay, isDesigner } = useAuth();
+  const { config, plans, partnerPlans } = usePlatformSettings();
   const [params, setParams] = useSearchParams();
   const [sub, setSub] = useState<Subscription | null>(null);
   const [cloverAddon, setCloverAddon] = useState<SubscriptionAddon | null>(null);
@@ -29,6 +29,7 @@ export default function BillingPage() {
   const [error, setError] = useState<string | null>(null);
   const autoCheckoutStarted = useRef(false);
 
+  const catalog = restaurant?.managed_by_studio_id ? partnerPlans : plans;
   const daysLeft = restaurant ? trialDaysLeft(restaurant.trial_ends_at) : 0;
   const justSucceeded = params.get("success") === "1";
 
@@ -73,6 +74,7 @@ export default function BillingPage() {
         interval,
         origin: window.location.origin,
         addons: withClover ? ["clover"] : [],
+        restaurant_id: restaurant?.id,
       },
     });
     setBusyPlan(null);
@@ -87,7 +89,7 @@ export default function BillingPage() {
   }
 
   useEffect(() => {
-    if (!loaded || active || autoCheckoutStarted.current) return;
+    if (!loaded || active || autoCheckoutStarted.current || !canPay) return;
     if (!billingFromUrl.checkout || !billingFromUrl.plan) return;
     if (!isValidPlanId(billingFromUrl.plan)) return;
 
@@ -102,6 +104,7 @@ export default function BillingPage() {
   }, [
     loaded,
     active,
+    canPay,
     billingFromUrl.checkout,
     billingFromUrl.plan,
     billingFromUrl.addon,
@@ -121,7 +124,7 @@ export default function BillingPage() {
     setBusyPlan("portal");
     setError(null);
     const { data, error: err } = await supabase.functions.invoke("customer-portal", {
-      body: { origin: window.location.origin },
+      body: { origin: window.location.origin, restaurant_id: restaurant?.id },
     });
     setBusyPlan(null);
     if (err || !data?.url) {
@@ -144,7 +147,7 @@ export default function BillingPage() {
     setError(null);
     const { data, error: err } = await supabase.functions.invoke(
       "manage-clover-addon",
-      { body: { action } }
+      { body: { action, restaurant_id: restaurant?.id } }
     );
     setBusyPlan(null);
     if (err || !data?.ok) {
@@ -163,11 +166,13 @@ export default function BillingPage() {
         <div>
           <h1 className="text-2xl font-semibold">Billing</h1>
           <p className="mt-1 text-sm text-smoke">
-            Every feature on every plan — pick by how many screens you run.
+            {restaurant?.managed_by_studio_id
+              ? "Partner pricing for this shop. The restaurant pays — the studio is free."
+              : "Every feature on every plan — pick by how many screens you run."}
           </p>
         </div>
         {active && (
-          <button className="btn-primary" onClick={() => void openPortal()} disabled={busyPlan !== null}>
+          <button className="btn-primary" onClick={() => void openPortal()} disabled={busyPlan !== null || !canPay}>
             <ExternalLink size={15} />
             {busyPlan === "portal" ? "Opening…" : "Manage billing"}
           </button>
@@ -208,7 +213,7 @@ export default function BillingPage() {
         )}
       </div>
 
-      {!active && loaded && (
+      {!active && loaded && canPay && (
         <>
           <BillingIntervalToggle value={interval} onChange={handleIntervalChange} className="mt-6" />
           <label className="card mt-6 flex cursor-pointer items-start gap-4 p-5">
@@ -242,10 +247,16 @@ export default function BillingPage() {
         </>
       )}
 
+      {isDesigner && !canPay && (
+        <div className="mt-6 rounded-xl border border-mist bg-cloud p-4 text-sm text-smoke">
+          Billing is paid by the restaurant. Invite the owner, then they subscribe from this page
+          on their account. You can see status here.
+        </div>
+      )}
       {error && <p className="mt-4 text-sm text-alert">{error}</p>}
 
       <div className="mt-6 grid items-start gap-5 lg:grid-cols-3">
-        {plans.map((plan) => {
+        {catalog.map((plan) => {
           const isCurrent = active && sub?.plan_id === plan.id;
           const price = interval === "yearly" ? plan.annualMonthly : plan.monthly;
           return (
@@ -289,17 +300,21 @@ export default function BillingPage() {
                 <button
                   className="btn-secondary mt-6 w-full"
                   onClick={() => void openPortal()}
-                  disabled={busyPlan !== null || isCurrent}
+                  disabled={busyPlan !== null || isCurrent || !canPay}
                 >
-                  {isCurrent ? "Your plan" : "Switch via portal"}
+                  {isCurrent ? "Your plan" : canPay ? "Switch via portal" : "Restaurant billing"}
                 </button>
               ) : (
                 <button
                   className={`${plan.popular ? "btn-primary" : "btn-secondary"} mt-6 w-full`}
                   onClick={() => void subscribe(plan.id)}
-                  disabled={busyPlan !== null}
+                  disabled={busyPlan !== null || !canPay}
                 >
-                  {busyPlan === plan.id ? "Starting checkout…" : "Subscribe"}
+                  {busyPlan === plan.id
+                    ? "Starting checkout…"
+                    : canPay
+                      ? "Subscribe"
+                      : "Restaurant pays"}
                 </button>
               )}
             </div>
@@ -330,7 +345,7 @@ export default function BillingPage() {
             </div>
             <button
               className={cloverActive ? "btn-secondary text-alert" : "btn-primary"}
-              disabled={busyPlan !== null || (!cloverActive && !config.clover.enabled)}
+              disabled={busyPlan !== null || !canPay || (!cloverActive && !config.clover.enabled)}
               onClick={() => void manageClover(cloverActive ? "remove" : "add")}
             >
               {busyPlan === "clover"

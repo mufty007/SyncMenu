@@ -3,10 +3,12 @@ import { Link, useParams } from "react-router-dom";
 import { CheckCircle2 } from "lucide-react";
 import Logo from "../../components/Logo";
 import { supabase } from "../../lib/supabase";
+import { useAuth } from "../../context/AuthContext";
 import type { Orientation } from "../../lib/types";
 
 export default function PairConfirmPage() {
   const { code } = useParams();
+  const { restaurant } = useAuth();
   const [name, setName] = useState("");
   const [orientation, setOrientation] = useState<Orientation>("landscape");
   const [error, setError] = useState<string | null>(null);
@@ -21,6 +23,7 @@ export default function PairConfirmPage() {
       p_code: code,
       p_name: name || "New screen",
       p_orientation: orientation,
+      p_restaurant_id: restaurant?.id ?? null,
     });
     setBusy(false);
     if (err) {

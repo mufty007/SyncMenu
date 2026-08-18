@@ -13,33 +13,46 @@ import {
   PanelLeftOpen,
   Settings,
   Shield,
+  Store,
 } from "lucide-react";
 import Logo, { SyncIcon } from "../../components/Logo";
 import AppShell from "../../components/AppShell";
 import Walkthrough from "../../components/Walkthrough";
 import { useAuth } from "../../context/AuthContext";
 import { trialDaysLeft } from "../../lib/format";
+import TransferBanner from "../../components/TransferBanner";
 
 const TOUR_KEY = "syncmenu.tour";
 const COLLAPSE_KEY = "syncmenu.sidebar-collapsed";
 
-const NAV = [
-  { to: "/app/menus", label: "Menus", icon: LayoutGrid },
-  { to: "/app/screens", label: "Screens", icon: MonitorPlay },
-  { to: "/app/playlists", label: "Playlists", icon: ListVideo },
-  { to: "/app/media", label: "Media", icon: Film },
-  { to: "/app/public", label: "Public page", icon: Globe },
-  { to: "/app/settings", label: "Settings", icon: Settings },
-  { to: "/app/billing", label: "Billing", icon: CreditCard },
+const ALL_NAV = [
+  { to: "/app/menus", label: "Menus", icon: LayoutGrid, designOnly: false },
+  { to: "/app/screens", label: "Screens", icon: MonitorPlay, designOnly: false },
+  { to: "/app/playlists", label: "Playlists", icon: ListVideo, designOnly: true },
+  { to: "/app/media", label: "Media", icon: Film, designOnly: true },
+  { to: "/app/public", label: "Public page", icon: Globe, designOnly: false },
+  { to: "/app/settings", label: "Settings", icon: Settings, designOnly: false },
+  { to: "/app/billing", label: "Billing", icon: CreditCard, designOnly: false },
 ];
 
 export default function DashboardLayout() {
-  const { restaurant, signOut, isPlatformAdmin } = useAuth();
+  const {
+    restaurant,
+    restaurants,
+    setActiveRestaurantId,
+    signOut,
+    isPlatformAdmin,
+    isDesigner,
+    canDesign,
+    isOperator,
+  } = useAuth();
   const daysLeft = restaurant ? trialDaysLeft(restaurant.trial_ends_at) : 0;
   const [collapsed, setCollapsed] = useState(
     () => localStorage.getItem(COLLAPSE_KEY) === "1"
   );
   const [tourOpen, setTourOpen] = useState(false);
+
+  const nav = ALL_NAV.filter((item) => canDesign || !item.designOnly);
 
   useEffect(() => {
     if (localStorage.getItem(TOUR_KEY) === "pending") {
@@ -70,19 +83,50 @@ export default function DashboardLayout() {
       </>
     ) : null;
 
+  const switcher =
+    restaurants.length > 1 ? (
+      <select
+        className="input mt-1 w-full truncate py-1.5 text-sm"
+        value={restaurant?.id ?? ""}
+        onChange={(e) => setActiveRestaurantId(e.target.value)}
+        aria-label="Switch restaurant"
+      >
+        {restaurants.map((r) => (
+          <option key={r.id} value={r.id}>
+            {r.name}
+          </option>
+        ))}
+      </select>
+    ) : (
+      <p className="truncate px-1 text-sm font-medium">{restaurant?.name}</p>
+    );
+
   const footer = (
     <>
-      <p className="truncate px-1 text-sm font-medium">{restaurant?.name}</p>
+      {switcher}
+      {isOperator && (
+        <p className="mt-1 px-1 text-[11px] font-medium uppercase tracking-wide text-smoke">
+          Limited access
+        </p>
+      )}
+      {isDesigner && (
+        <NavLink to="/studio" className="btn-ghost mt-1 w-full justify-start">
+          <Store size={16} className="shrink-0" />
+          Studio home
+        </NavLink>
+      )}
       {isPlatformAdmin && (
         <NavLink to="/platform" className="btn-ghost mt-1 w-full justify-start">
           <Shield size={16} className="shrink-0" />
           Platform console
         </NavLink>
       )}
-      <button onClick={() => setTourOpen(true)} className="btn-ghost mt-1 w-full justify-start">
-        <HelpCircle size={16} className="shrink-0" />
-        Take the tour
-      </button>
+      {!isOperator && (
+        <button onClick={() => setTourOpen(true)} className="btn-ghost mt-1 w-full justify-start">
+          <HelpCircle size={16} className="shrink-0" />
+          Take the tour
+        </button>
+      )}
       <button onClick={() => void signOut()} className="btn-ghost mt-1 w-full justify-start">
         <LogOut size={16} className="shrink-0" />
         Sign out
@@ -94,12 +138,13 @@ export default function DashboardLayout() {
     <>
       {/* Mobile + tablet: drawer shell */}
       <div className="lg:hidden">
-        <AppShell brand={<Logo size={26} />} nav={NAV} footer={footer} variant="light">
+        <AppShell brand={<Logo size={26} />} nav={nav} footer={footer} variant="light">
           {trialText && (
             <div className="-mx-4 -mt-4 mb-4 border-b border-amber/30 bg-amber/10 px-4 py-2 text-sm text-ink sm:-mx-6 sm:px-6">
               {trialText}
             </div>
           )}
+          <TransferBanner />
           <Outlet />
         </AppShell>
       </div>
@@ -127,7 +172,7 @@ export default function DashboardLayout() {
           </div>
 
           <nav className="mt-4 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
-            {NAV.map(({ to, label, icon: Icon }) => (
+            {nav.map(({ to, label, icon: Icon }) => (
               <NavLink
                 key={to}
                 to={to}
@@ -154,6 +199,11 @@ export default function DashboardLayout() {
               footer
             ) : (
               <div className="flex flex-col items-center gap-1">
+                {isDesigner && (
+                  <NavLink to="/studio" title="Studio home" className="btn-ghost px-1.5">
+                    <Store size={16} />
+                  </NavLink>
+                )}
                 {isPlatformAdmin && (
                   <NavLink to="/platform" title="Platform console" className="btn-ghost px-1.5">
                     <Shield size={16} />
@@ -174,6 +224,7 @@ export default function DashboardLayout() {
             </div>
           )}
           <div className="mx-auto max-w-6xl p-8">
+            <TransferBanner />
             <Outlet />
           </div>
         </main>

@@ -17,6 +17,9 @@ export const PRICE_NICKNAMES: Record<string, Record<string, string>> = {
   starter: { monthly: "Starter", yearly: "Starter Yearly" },
   growth: { monthly: "Growth", yearly: "Growth Yearly" },
   pro: { monthly: "Pro", yearly: "Pro Yearly" },
+  partner: { monthly: "Partner", yearly: "Partner Yearly" },
+  partner_growth: { monthly: "Partner Growth", yearly: "Partner Growth Yearly" },
+  partner_pro: { monthly: "Partner Pro", yearly: "Partner Pro Yearly" },
 };
 
 /** Recurring add-on price nicknames under the same Stripe product. */
@@ -94,6 +97,9 @@ export async function resolveAddonPriceId(
 export function planFromNickname(nickname: string | null | undefined): string | null {
   if (!nickname) return null;
   const n = nickname.toLowerCase();
+  if (n.includes("partner growth")) return "partner_growth";
+  if (n.includes("partner pro")) return "partner_pro";
+  if (n.includes("partner")) return "partner";
   if (n.includes("starter")) return "starter";
   if (n.includes("growth")) return "growth";
   if (n.includes("pro")) return "pro";

@@ -8,6 +8,7 @@ import {
   signOAuthState,
   type OAuthReturnIntent,
 } from "../_shared/clover.ts";
+import { callerRole, loadCallerRestaurant, parseJsonBody } from "../_shared/restaurant.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -31,23 +32,22 @@ Deno.serve(async (req) => {
     } = await supabase.auth.getUser();
     if (!user) return json({ error: "Not signed in" }, 401);
 
-    const { data: restaurant } = await supabase
-      .from("restaurants")
-      .select("id")
-      .eq("owner_id", user.id)
-      .single();
-    if (!restaurant) return json({ error: "No restaurant for this account" }, 400);
+    const body = parseJsonBody(await req.json().catch(() => ({})));
+    const { restaurant, error: restErr } = await loadCallerRestaurant(
+      supabase,
+      typeof body.restaurant_id === "string" ? body.restaurant_id : null
+    );
+    if (!restaurant) return json({ error: restErr ?? "No restaurant for this account" }, 400);
+    const role = await callerRole(supabase, restaurant.id);
+    if (role !== "owner" && role !== "designer") {
+      return json({ error: "Only the designer or owner can connect Clover." }, 403);
+    }
     if (!(await hasCloverEntitlement(restaurant.id))) {
       return json({ error: "An active Clover add-on is required" }, 403);
     }
 
     let intent: OAuthReturnIntent = "integrations";
-    try {
-      const body = (await req.json()) as { intent?: string };
-      if (body.intent === "onboarding_import") intent = "onboarding_import";
-    } catch {
-      /* no body */
-    }
+    if (body.intent === "onboarding_import") intent = "onboarding_import";
 
     const expiresAt = Date.now() + 15 * 60 * 1000;
     const state = await signOAuthState(

@@ -7,6 +7,7 @@ import {
   loadCloverConfig,
 } from "../_shared/clover.ts";
 import { importCloverMenu } from "../_shared/clover-import.ts";
+import { callerRole, loadCallerRestaurant, parseJsonBody } from "../_shared/restaurant.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -30,12 +31,16 @@ Deno.serve(async (req) => {
     } = await supabase.auth.getUser();
     if (!user) return json({ error: "Not signed in" }, 401);
 
-    const { data: restaurant } = await supabase
-      .from("restaurants")
-      .select("id, brand_color")
-      .eq("owner_id", user.id)
-      .single();
-    if (!restaurant) return json({ error: "No restaurant for this account" }, 400);
+    const body = parseJsonBody(await req.json().catch(() => ({})));
+    const { restaurant, error: restErr } = await loadCallerRestaurant(
+      supabase,
+      typeof body.restaurant_id === "string" ? body.restaurant_id : null
+    );
+    if (!restaurant) return json({ error: restErr ?? "No restaurant for this account" }, 400);
+    const role = await callerRole(supabase, restaurant.id);
+    if (role !== "owner" && role !== "designer") {
+      return json({ error: "Only the designer or owner can import from Clover." }, 403);
+    }
     if (!(await hasCloverEntitlement(restaurant.id))) {
       return json({ error: "An active Clover add-on is required" }, 403);
     }
@@ -45,20 +50,14 @@ Deno.serve(async (req) => {
       return json({ error: "Connect Clover before importing" }, 400);
     }
 
-    let body: { force_new?: boolean; template_id?: string } = {};
-    try {
-      body = (await req.json()) as typeof body;
-    } catch {
-      body = {};
-    }
+    const forceNew = body.force_new === true;
+    const templateId = typeof body.template_id === "string" ? body.template_id : undefined;
 
-    // Re-import creates a new menu; first import also creates new
     if (
-      !body.force_new &&
+      !forceNew &&
       integration.imported_menu_id &&
       integration.initial_import_status === "done"
     ) {
-      // Still allow re-import as new menu when force_new; otherwise return existing
       return json({
         ok: true,
         already_imported: true,
@@ -69,7 +68,7 @@ Deno.serve(async (req) => {
 
     const result = await importCloverMenu(config, integration, {
       brandColor: restaurant.brand_color ?? undefined,
-      templateId: body.template_id,
+      templateId,
     });
 
     return json({ ok: true, ...result });

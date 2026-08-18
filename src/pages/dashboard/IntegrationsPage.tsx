@@ -37,7 +37,9 @@ export default function IntegrationsPage() {
 
   async function load() {
     const [{ data: clover }, { data: menuRows }] = await Promise.all([
-      supabase.rpc("get_clover_integration"),
+      supabase.rpc("get_clover_integration", {
+        p_restaurant_id: restaurant?.id ?? null,
+      }),
       restaurant
         ? supabase.from("menus").select("id, name").eq("restaurant_id", restaurant.id).order("name")
         : Promise.resolve({ data: [] }),
@@ -65,12 +67,13 @@ export default function IntegrationsPage() {
   }, [searchParams, setSearchParams]);
 
   if (!restaurant) return null;
+  const restaurantId = restaurant.id;
 
   async function connectClover() {
     setBusy(true);
     setError(null);
     const { data, error: err } = await supabase.functions.invoke("clover-oauth-start", {
-      body: { intent: "integrations" },
+      body: { intent: "integrations", restaurant_id: restaurantId },
     });
     setBusy(false);
     if (err) {
@@ -89,7 +92,9 @@ export default function IntegrationsPage() {
     if (!confirm("Disconnect Clover? Delivery menus will no longer update from SyncMenu.")) return;
     setBusy(true);
     setError(null);
-    const { error: err } = await supabase.functions.invoke("clover-disconnect");
+    const { error: err } = await supabase.functions.invoke("clover-disconnect", {
+      body: { restaurant_id: restaurantId },
+    });
     setBusy(false);
     if (err) {
       setError(err.message);
@@ -104,6 +109,7 @@ export default function IntegrationsPage() {
     setError(null);
     const { data, error: err } = await supabase.rpc("set_clover_delivery_menu", {
       p_menu_id: menuId,
+      p_restaurant_id: restaurantId,
     });
     setBusy(false);
     if (err) {
@@ -120,7 +126,7 @@ export default function IntegrationsPage() {
     setError(null);
     setMessage(null);
     const { data, error: err } = await supabase.functions.invoke("clover-import", {
-      body: { force_new: forceNew },
+      body: { force_new: forceNew, restaurant_id: restaurantId },
     });
     setBusy(false);
     if (err) {
@@ -154,7 +160,7 @@ export default function IntegrationsPage() {
     setBusy(true);
     setError(null);
     const { data, error: err } = await supabase.functions.invoke("clover-sync", {
-      body: { action: "sync_now" },
+      body: { action: "sync_now", restaurant_id: restaurantId },
     });
     setBusy(false);
     if (err) {

@@ -25,6 +25,29 @@ function getAutomation(config: EmailConfig, key: string): AutomationDef | null {
   return auto;
 }
 
+async function billingUserForRestaurant(
+  admin: ReturnType<typeof createClient>,
+  restaurantId: string,
+  ownerId: string | null
+): Promise<{ userId: string; email: string } | null> {
+  let userId = ownerId;
+  if (!userId) {
+    const { data: member } = await admin
+      .from("restaurant_members")
+      .select("user_id")
+      .eq("restaurant_id", restaurantId)
+      .in("role", ["owner", "operator", "designer"])
+      .not("accepted_at", "is", null)
+      .limit(1)
+      .maybeSingle();
+    userId = member?.user_id ?? null;
+  }
+  if (!userId) return null;
+  const { data: user } = await admin.auth.admin.getUserById(userId);
+  if (!user?.user?.email) return null;
+  return { userId, email: user.user.email };
+}
+
 /** Send a transactional automation email (deduped via email_automation_log). */
 export async function sendAutomation(
   key: string,
@@ -105,20 +128,20 @@ export async function processAutomationQueue(): Promise<number> {
       .single();
     if (!owner) continue;
 
-    const { data: user } = await admin.auth.admin.getUserById(owner.owner_id);
-    if (!user?.user?.email) continue;
+    const billing = await billingUserForRestaurant(admin, row.restaurant_id, owner.owner_id);
+    if (!billing) continue;
 
     const vars = {
       ...(row.vars as Record<string, string>),
       restaurant_name: owner.name,
-      owner_email: user.user.email,
+      owner_email: billing.email,
     };
 
     try {
       const ok = await sendAutomation(row.automation_key, {
-        userId: owner.owner_id,
+        userId: billing.userId,
         restaurantId: row.restaurant_id,
-        email: user.user.email,
+        email: billing.email,
         vars,
       });
       if (ok) sent++;
@@ -163,8 +186,8 @@ export async function processTrialAutomations(): Promise<number> {
       .maybeSingle();
     if (sub?.status === "active" || sub?.status === "trialing") continue;
 
-    const { data: user } = await admin.auth.admin.getUserById(r.owner_id);
-    if (!user?.user?.email) continue;
+    const billing = await billingUserForRestaurant(admin, r.id, r.owner_id);
+    if (!billing) continue;
 
     const trialEnd = new Date(r.trial_ends_at);
     const now = new Date();
@@ -173,7 +196,7 @@ export async function processTrialAutomations(): Promise<number> {
 
     const vars = {
       restaurant_name: r.name,
-      owner_email: user.user.email,
+      owner_email: billing.email,
       trial_days_left: String(Math.max(daysLeft, 0)),
     };
 
@@ -181,9 +204,9 @@ export async function processTrialAutomations(): Promise<number> {
       try {
         if (
           await sendAutomation("trial_ending", {
-            userId: r.owner_id,
+            userId: billing.userId,
             restaurantId: r.id,
-            email: user.user.email,
+            email: billing.email,
             vars,
           })
         ) {
@@ -198,9 +221,9 @@ export async function processTrialAutomations(): Promise<number> {
       try {
         if (
           await sendAutomation("trial_expired", {
-            userId: r.owner_id,
+            userId: billing.userId,
             restaurantId: r.id,
-            email: user.user.email,
+            email: billing.email,
             vars,
           })
         ) {

@@ -27,7 +27,7 @@ const NAV = [
 ];
 
 export default function PlatformLayout() {
-  const { signOut, session } = useAuth();
+  const { signOut, session, isDesigner } = useAuth();
 
   const brand = (
     <div className="px-1 py-1">
@@ -42,10 +42,10 @@ export default function PlatformLayout() {
     <>
       <p className="truncate px-1 text-xs text-white/50">{session?.user.email}</p>
       <NavLink
-        to="/app/menus"
+        to={isDesigner ? "/studio" : "/app/menus"}
         className="mt-2 flex items-center gap-2 rounded-xl px-1 py-2 text-sm text-white/70 hover:bg-white/10"
       >
-        <Users size={16} /> Owner dashboard
+        <Users size={16} /> {isDesigner ? "Studio" : "Owner dashboard"}
       </NavLink>
       <button
         onClick={() => void signOut()}

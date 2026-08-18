@@ -7,6 +7,7 @@ import SetupNotice from "./pages/SetupNotice";
 // Route-level code splitting keeps the kiosk player bundle lean for
 // low-powered smart-TV browsers (dashboard code never loads on the TV).
 const Landing = lazy(() => import("./pages/Landing"));
+const ForDesigners = lazy(() => import("./pages/ForDesigners"));
 const Contact = lazy(() => import("./pages/Contact"));
 const Privacy = lazy(() => import("./pages/legal/Privacy"));
 const Terms = lazy(() => import("./pages/legal/Terms"));
@@ -15,6 +16,8 @@ const Signup = lazy(() => import("./pages/auth/Signup"));
 const ForgotPassword = lazy(() => import("./pages/auth/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/auth/ResetPassword"));
 const Onboarding = lazy(() => import("./pages/auth/Onboarding"));
+const StudioSetup = lazy(() => import("./pages/auth/StudioSetup"));
+const InvitePage = lazy(() => import("./pages/auth/InvitePage"));
 const DashboardLayout = lazy(() => import("./pages/dashboard/DashboardLayout"));
 const MenusPage = lazy(() => import("./pages/dashboard/MenusPage"));
 const MenuEditorPage = lazy(() => import("./pages/dashboard/MenuEditorPage"));
@@ -27,6 +30,7 @@ const OwnerIntegrationsPage = lazy(() => import("./pages/dashboard/IntegrationsP
 const BillingPage = lazy(() => import("./pages/dashboard/BillingPage"));
 const PairConfirmPage = lazy(() => import("./pages/dashboard/PairConfirmPage"));
 const StudioPage = lazy(() => import("./pages/studio/StudioPage"));
+const StudioHomePage = lazy(() => import("./pages/studio/StudioHomePage"));
 const PlayerPage = lazy(() => import("./pages/player/PlayerPage"));
 const PublicMenuPage = lazy(() => import("./pages/PublicMenuPage"));
 const HubPage = lazy(() => import("./pages/HubPage"));
@@ -54,7 +58,7 @@ function Spinner() {
 }
 
 function Protected({ children }: { children: ReactNode }) {
-  const { session, restaurant, isPlatformAdmin, loading } = useAuth();
+  const { session, restaurant, isPlatformAdmin, isDesigner, studio, loading } = useAuth();
   const location = useLocation();
   if (!isSupabaseConfigured) return <SetupNotice />;
   if (loading) return <Spinner />;
@@ -62,15 +66,47 @@ function Protected({ children }: { children: ReactNode }) {
     const from = location.pathname + location.search;
     return <Navigate to="/login" state={{ from }} replace />;
   }
-  if (!restaurant && location.pathname !== "/onboarding") {
+
+  const path = location.pathname;
+  const studioArea = path === "/studio" || path.startsWith("/studio/setup");
+  const canvasStudio = path.startsWith("/studio/") && path !== "/studio" && !path.startsWith("/studio/setup");
+
+  if (isDesigner) {
+    if (!studio && path !== "/studio/setup") {
+      return <Navigate to="/studio/setup" replace />;
+    }
+    if (studio && path === "/studio/setup") {
+      const invite = new URLSearchParams(location.search).get("invite");
+      return <Navigate to={invite ? `/invite/${invite}` : "/studio"} replace />;
+    }
+    if (!restaurant && !studioArea && path.startsWith("/app")) {
+      return <Navigate to="/studio" replace />;
+    }
+    if (!restaurant && canvasStudio) {
+      return <Navigate to="/studio" replace />;
+    }
+    return <>{children}</>;
+  }
+
+  if (!restaurant && path !== "/onboarding") {
     if (isPlatformAdmin) {
       return <Navigate to="/platform" replace />;
     }
-    const onboardingPath = location.pathname.startsWith("/app/billing")
+    const onboardingPath = path.startsWith("/app/billing")
       ? `/onboarding${location.search}`
       : "/onboarding";
     return <Navigate to={onboardingPath} replace />;
   }
+  if (path === "/studio" || path.startsWith("/studio/setup")) {
+    return <Navigate to="/app" replace />;
+  }
+  return <>{children}</>;
+}
+
+function DesignerOnly({ children }: { children: ReactNode }) {
+  const { canDesign, loading } = useAuth();
+  if (loading) return <Spinner />;
+  if (!canDesign) return <Navigate to="/app/menus" replace />;
   return <>{children}</>;
 }
 
@@ -111,6 +147,7 @@ export default function App() {
       <ScrollToHash />
       <Routes>
       <Route path="/" element={<Landing />} />
+      <Route path="/for-designers" element={<ForDesigners />} />
       <Route path="/contact" element={<Contact />} />
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/terms" element={<Terms />} />
@@ -118,6 +155,7 @@ export default function App() {
       <Route path="/signup" element={<Signup />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/invite/:token" element={<InvitePage />} />
       <Route
         path="/onboarding"
         element={
@@ -127,10 +165,28 @@ export default function App() {
         }
       />
       <Route
+        path="/studio/setup"
+        element={
+          <Protected>
+            <StudioSetup />
+          </Protected>
+        }
+      />
+      <Route
+        path="/studio"
+        element={
+          <Protected>
+            <StudioHomePage />
+          </Protected>
+        }
+      />
+      <Route
         path="/studio/:menuId"
         element={
           <Protected>
-            <StudioPage />
+            <DesignerOnly>
+              <StudioPage />
+            </DesignerOnly>
           </Protected>
         }
       />
@@ -154,13 +210,41 @@ export default function App() {
         <Route path="menus" element={<MenusPage />} />
         <Route path="menus/:menuId" element={<MenuEditorPage />} />
         <Route path="screens" element={<ScreensPage />} />
-        <Route path="playlists" element={<PlaylistsPage />} />
-        <Route path="playlists/:playlistId" element={<PlaylistEditorPage />} />
-        <Route path="media" element={<MediaLibraryPage />} />
+        <Route
+          path="playlists"
+          element={
+            <DesignerOnly>
+              <PlaylistsPage />
+            </DesignerOnly>
+          }
+        />
+        <Route
+          path="playlists/:playlistId"
+          element={
+            <DesignerOnly>
+              <PlaylistEditorPage />
+            </DesignerOnly>
+          }
+        />
+        <Route
+          path="media"
+          element={
+            <DesignerOnly>
+              <MediaLibraryPage />
+            </DesignerOnly>
+          }
+        />
         <Route path="public" element={<PublicPagePage />} />
         <Route path="setup-tv" element={<TvSetupPage />} />
         <Route path="settings" element={<SettingsPage />} />
-        <Route path="settings/integrations" element={<OwnerIntegrationsPage />} />
+        <Route
+          path="settings/integrations"
+          element={
+            <DesignerOnly>
+              <OwnerIntegrationsPage />
+            </DesignerOnly>
+          }
+        />
         <Route path="billing" element={<BillingPage />} />
       </Route>
       <Route

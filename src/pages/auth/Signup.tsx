@@ -15,6 +15,8 @@ export default function Signup() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const billingIntent = parseBillingParams(searchParams);
+  const isDesigner = searchParams.get("type") === "designer";
+  const inviteToken = searchParams.get("invite");
 
   if (!isSupabaseConfigured) return <SetupNotice />;
 
@@ -22,7 +24,13 @@ export default function Signup() {
     e.preventDefault();
     setBusy(true);
     setError(null);
-    const { data, error: err } = await supabase.auth.signUp({ email, password });
+    const { data, error: err } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { account_type: isDesigner ? "designer" : "restaurant" },
+      },
+    });
     setBusy(false);
     if (err) {
       setError(err.message);
@@ -32,7 +40,6 @@ export default function Signup() {
       saveBillingIntent(billingIntent);
     }
     if (!data.session) {
-      // Email confirmation is enabled on the Supabase project
       setNeedsConfirm(true);
       return;
     }
@@ -43,6 +50,17 @@ export default function Signup() {
         origin: window.location.origin,
       },
     });
+    if (inviteToken) {
+      navigate(`/invite/${inviteToken}`, { replace: true });
+      return;
+    }
+    if (isDesigner) {
+      navigate(
+        inviteToken ? `/studio/setup?invite=${encodeURIComponent(inviteToken)}` : "/studio/setup",
+        { replace: true }
+      );
+      return;
+    }
     const dest = await resolvePostAuthPath();
     const qs = searchParams.toString();
     navigate(
@@ -72,9 +90,13 @@ export default function Signup() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="card p-8">
-            <h1 className="text-xl font-semibold">Start your free trial</h1>
+            <h1 className="text-xl font-semibold">
+              {isDesigner ? "Create your designer account" : "Start your free trial"}
+            </h1>
             <p className="mt-1 text-sm text-smoke">
-              14 days free. No credit card needed to try it out.
+              {isDesigner
+                ? "The studio is free. Your restaurant clients pay SyncMenu from $15/month."
+                : "14 days free. No credit card needed to try it out."}
             </p>
             <div className="mt-6 space-y-4">
               <div>
@@ -118,6 +140,17 @@ export default function Signup() {
                 Log in
               </Link>
             </p>
+            {!isDesigner && (
+              <p className="mt-3 text-center text-sm text-smoke">
+                Design menus for restaurants?{" "}
+                <Link
+                  to="/signup?type=designer"
+                  className="font-medium text-brand hover:text-ember"
+                >
+                  Sign up as a designer
+                </Link>
+              </p>
+            )}
           </form>
         )}
       </div>

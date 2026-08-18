@@ -1,4 +1,4 @@
-import { PLANS, type Plan } from "./types";
+import { PARTNER_PLANS, PLANS, type Plan } from "./types";
 
 export interface PlanLimitConfig {
   screens: number;
@@ -35,11 +35,17 @@ export const DEFAULT_PLATFORM_CONFIG: PlatformConfig = {
     starter: { screens: 1, menus: 5 },
     growth: { screens: 5, menus: 10 },
     pro: { screens: 10, menus: 999 },
+    partner: { screens: 2, menus: 5 },
+    partner_growth: { screens: 6, menus: 10 },
+    partner_pro: { screens: 12, menus: 999 },
   },
   pricing: {
     starter: { monthly: 15, annualMonthly: 12 },
     growth: { monthly: 30, annualMonthly: 25 },
     pro: { monthly: 99, annualMonthly: 82 },
+    partner: { monthly: 15, annualMonthly: 12 },
+    partner_growth: { monthly: 30, annualMonthly: 25 },
+    partner_pro: { monthly: 99, annualMonthly: 82 },
   },
   clover: {
     enabled: false,
@@ -73,8 +79,12 @@ export function mergePlatformConfig(raw: unknown): PlatformConfig {
 }
 
 /** Merge DB pricing into static plan metadata (names, perks, etc.). */
-export function plansFromConfig(config: PlatformConfig): Plan[] {
-  return PLANS.map((plan) => ({
+export function plansFromConfig(
+  config: PlatformConfig,
+  catalog: "self-serve" | "partner" = "self-serve"
+): Plan[] {
+  const source = catalog === "partner" ? PARTNER_PLANS : PLANS;
+  return source.map((plan) => ({
     ...plan,
     monthly: config.pricing[plan.id]?.monthly ?? plan.monthly,
     annualMonthly: config.pricing[plan.id]?.annualMonthly ?? plan.annualMonthly,

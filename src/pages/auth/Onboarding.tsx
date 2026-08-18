@@ -39,7 +39,7 @@ const STARTER_SECTIONS: { name: string; items: [string, string, number][] }[] = 
 type MenuSource = "sample" | "clover";
 
 export default function Onboarding() {
-  const { session, restaurant, isPlatformAdmin, refreshRestaurant } = useAuth();
+  const { session, restaurant, isPlatformAdmin, isDesigner, refreshRestaurant } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const billingIntent = parseBillingParams(searchParams);
@@ -127,6 +127,7 @@ export default function Onboarding() {
   );
 
   if (!session) return <Navigate to="/login" replace />;
+  if (isDesigner) return <Navigate to="/studio" replace />;
   if (isPlatformAdmin && !restaurant) return <Navigate to="/platform" replace />;
   // Allow staying on onboarding when completing Clover return or mid-flow after restaurant create
   if (restaurant && !done && !awaitingClover && cloverReturn !== "imported" && cloverReturn !== "error") {
@@ -233,7 +234,9 @@ export default function Onboarding() {
       await refreshRestaurant();
     }
 
-    const { data: cloverStatus } = await supabase.rpc("get_clover_integration");
+    const { data: cloverStatus } = await supabase.rpc("get_clover_integration", {
+      p_restaurant_id: restaurantId,
+    });
     const status = cloverStatus as { entitled?: boolean; feature_enabled?: boolean; available?: boolean };
     if (!status?.available) {
       // Not entitled yet — create sample menu and note pending
@@ -249,7 +252,7 @@ export default function Onboarding() {
 
     setAwaitingClover(true);
     const { data, error: err } = await supabase.functions.invoke("clover-oauth-start", {
-      body: { intent: "onboarding_import" },
+      body: { intent: "onboarding_import", restaurant_id: restaurantId },
     });
     if (err) {
       setBusy(false);

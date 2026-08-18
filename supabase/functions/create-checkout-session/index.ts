@@ -7,6 +7,10 @@ import {
   resolvePriceId,
   stripe,
 } from "../_shared/stripe.ts";
+import { callerRole, loadCallerRestaurant, parseJsonBody } from "../_shared/restaurant.ts";
+
+const SELF_SERVE_PLANS = new Set(["starter", "growth", "pro"]);
+const PARTNER_PLANS = new Set(["partner", "partner_growth", "partner_pro"]);
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -25,21 +29,34 @@ Deno.serve(async (req) => {
     } = await supabase.auth.getUser();
     if (!user) return json({ error: "Not signed in" }, 401);
 
-    const { data: restaurant } = await supabase
-      .from("restaurants")
-      .select("id, name")
-      .eq("owner_id", user.id)
-      .single();
-    if (!restaurant) return json({ error: "No restaurant for this account" }, 400);
+    const body = parseJsonBody(await req.json().catch(() => ({})));
+    const { restaurant, error: restErr } = await loadCallerRestaurant(
+      supabase,
+      typeof body.restaurant_id === "string" ? body.restaurant_id : null
+    );
+    if (!restaurant) return json({ error: restErr ?? "No restaurant for this account" }, 400);
 
-    const { plan, interval, origin, addons = [] } = await req.json();
-    if (
-      !Array.isArray(addons) ||
-      addons.some((addon) => addon !== "clover") ||
-      new Set(addons).size !== addons.length
-    ) {
+    const role = await callerRole(supabase, restaurant.id);
+    if (role !== "owner" && role !== "operator") {
+      return json({ error: "The restaurant owner must subscribe from their dashboard." }, 403);
+    }
+
+    const plan = body.plan as string;
+    const interval = body.interval as string;
+    const origin = body.origin as string;
+    const addons = Array.isArray(body.addons) ? body.addons : [];
+    if (addons.some((addon) => addon !== "clover") || new Set(addons).size !== addons.length) {
       return json({ error: "Unknown add-on" }, 400);
     }
+
+    const partnerManaged = !!restaurant.managed_by_studio_id;
+    if (partnerManaged && !PARTNER_PLANS.has(plan)) {
+      return json({ error: "This restaurant uses partner pricing." }, 400);
+    }
+    if (!partnerManaged && !SELF_SERVE_PLANS.has(plan)) {
+      return json({ error: "Unknown plan" }, 400);
+    }
+
     const price = await resolvePriceId(plan, interval);
     const addonPrices = await Promise.all(
       addons.map((addon: string) => resolveAddonPriceId(addon, interval))

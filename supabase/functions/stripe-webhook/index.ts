@@ -25,11 +25,25 @@ async function ownerEmailForRestaurant(restaurantId: string): Promise<{
     .single();
   if (!restaurant) return null;
 
-  const { data: user } = await admin.auth.admin.getUserById(restaurant.owner_id);
+  let userId = restaurant.owner_id as string | null;
+  if (!userId) {
+    const { data: member } = await admin
+      .from("restaurant_members")
+      .select("user_id")
+      .eq("restaurant_id", restaurantId)
+      .in("role", ["owner", "operator"])
+      .not("accepted_at", "is", null)
+      .limit(1)
+      .maybeSingle();
+    userId = member?.user_id ?? null;
+  }
+  if (!userId) return null;
+
+  const { data: user } = await admin.auth.admin.getUserById(userId);
   if (!user?.user?.email) return null;
 
   return {
-    userId: restaurant.owner_id,
+    userId,
     email: user.user.email,
     restaurantName: restaurant.name,
   };
